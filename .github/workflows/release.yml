@@ -1,25 +1,67 @@
 name: Build & Release (Windows)
+
 on:
   push:
     tags:
       - 'v*.*.*'
+
 jobs:
   build-win:
     runs-on: windows-latest
+
+    env:
+      # Кэши Electron и electron-builder (очень ускоряет и спасает от обрывов)
+      ELECTRON_CACHE: ${{ runner.temp }}\\electron-cache
+      ELECTRON_BUILDER_CACHE: ${{ runner.temp }}\\electron-builder
+      # На всякий случай — явное зеркало релизов (обычное GitHub)
+      ELECTRON_MIRROR: https://github.com/electron/electron/releases/download/
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Install deps
-        run: npm install
+          cache: 'npm'   # кеш для node_modules по lockfile
+
+      - name: Prepare caches (Electron)
+        run: |
+          mkdir "$env:ELECTRON_CACHE" -Force | Out-Null
+          mkdir "$env:ELECTRON_BUILDER_CACHE" -Force | Out-Null
+
+      - name: NPM network hardening
+        run: |
+          npm config set fetch-retries 5
+          npm config set fetch-retry-maxtimeout 600000
+          npm config set fetch-retry-mintimeout 20000
+          npm config set network-timeout 600000
+          npm config set prefer-online true
+
+      # (опционально) Генерация ICO из PNG. Убери/закомментируй, если иконка уже готова.
       - name: Make ICO from PNG
-        run: npx png-to-ico build/icon.png > build/icon.ico
-      - name: Build & Publish to GitHub Releases
+        run: |
+          if (Test-Path .\build\icon.png) {
+            npx png-to-ico .\build\icon.png | Out-File -FilePath .\build\icon.ico -Encoding Byte
+          } else {
+            Write-Host "build/icon.png not found, skipping"
+          }
+
+      # npm ci с повторными попытками
+      - name: Install deps (retry)
+        uses: nick-fields/retry@v2
+        with:
+          timeout_minutes: 15
+          max_attempts: 3
+          command: npm ci
+
+      # Сборка и публикация в Releases — тоже с повтором на случай обрыва при загрузке артефактов
+      - name: Build & Publish to GitHub Releases (retry)
+        uses: nick-fields/retry@v2
+        with:
+          timeout_minutes: 30
+          max_attempts: 3
+          command: npx electron-builder --win nsis portable -p always
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          npm_config_build_from_source: false
-        run: |
-          npx electron-builder --win nsis portable -p always
