@@ -3,7 +3,7 @@ name: Build & Release (Windows)
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - 'v*.*.*'        # билд и релиз только по тегам вида v1.2.3
 
 jobs:
   build-win:
@@ -17,27 +17,22 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          # кэш npm не включаю: у тебя нет package-lock.json
+          # ВАЖНО: не включаем cache: 'npm', чтобы не требовался lock-файл
 
       - name: Install deps
         run: npm install
 
-      # Опционально: сделаем ICO из PNG, если PNG есть, а ICO ещё нет
+      # Опционально: если есть build/icon.png и нет build/icon.ico — сделаем .ico
+      # (скобки вокруг (Test-Path ...) обязательны, иначе pwsh думает, что -and это параметр)
       - name: Make ICO from PNG (optional)
         shell: pwsh
         run: |
           if ((Test-Path 'build/icon.png') -and -not (Test-Path 'build/icon.ico')) {
-            npm install -D png-to-ico@2
-            node -e "require('png-to-ico')('build/icon.png').then(b=>require('fs').writeFileSync('build/icon.ico',b))"
+            npx png-to-ico 'build/icon.png' | Set-Content -Encoding Byte 'build/icon.ico'
           }
 
       - name: Build & Publish to GitHub Releases
-        shell: pwsh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Кэши и зеркало скачивания — задаём через переменные окружения PowerShell
-          $env:ELECTRON_CACHE = "$env:RUNNER_TEMP\electron-cache"
-          $env:ELECTRON_BUILDER_CACHE = "$env:RUNNER_TEMP\electron-builder"
-          $env:ELECTRON_MIRROR = "https://github.com/electron/electron/releases/download/"
           npx electron-builder --win nsis portable -p always
