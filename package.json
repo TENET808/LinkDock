@@ -7,18 +7,19 @@
   "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --win nsis portable",
+    "prebuild": "node scripts/make-ico.js",               // <— ДОБАВЛЕНО
+    "build": "electron-builder --win nsis portable",       // <— portable + nsis
     "publish": "electron-builder --win nsis portable -p always"
   },
   "dependencies": {
-    "electron-store": "8.1.0",
+    "electron-store": "8.1.0",            // <— фикс для ERR_REQUIRE_ESM
     "electron-updater": "^6.3.0"
   },
   "devDependencies": {
     "electron": "^31.0.0",
     "electron-builder": "^24.13.3",
     "electron-packager": "^17.1.2",
-    "png-to-ico": "^2.1.8"
+    "png-to-ico": "^2.1.8"                // <— ДОБАВЛЕНО
   },
   "build": {
     "appId": "com.linkdock.app",
@@ -41,11 +42,7 @@
       "shortcutName": "LinkDock",
       "artifactName": "LinkDock-Setup-${version}.exe"
     },
-    "portable": {
-      "artifactName": "LinkDock-${version}-portable.exe"
-    },
-    "publish": [
-      { "provider": "github", "owner": "TENET808", "repo": "LinkDock" }
-    ]
+    "portable": { "artifactName": "LinkDock-${version}-portable.exe" },
+    "publish": [ { "provider": "github", "owner": "TENET808", "repo": "LinkDock" } ]
   }
 }
