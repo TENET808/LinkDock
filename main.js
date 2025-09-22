@@ -128,28 +128,39 @@ ipcMain.handle('file:importBookmarks', async (e, from) => {
     }
 
     if (from === 'firefox'){
-      // Firefox places.sqlite
-      const ff = path.join(process.env.APPDATA, 'Mozilla/Firefox');
-      const profilesIni = path.join(ff, 'profiles.ini');
-      if (!fs.existsSync(profilesIni)) throw new Error('Firefox профиль не найден');
-      const ini = fs.readFileSync(profilesIni, 'utf-8');
-      const prof = /Path=(.*)/.exec(ini)?.[1];
-      if (!prof) throw new Error('Не удалось определить профиль Firefox');
-      const dbPath = path.join(ff, prof, 'places.sqlite');
-      if (!fs.existsSync(dbPath)) throw new Error('places.sqlite не найден');
-      const Database = require('better-sqlite3');
-      const db = new Database(dbPath, { readonly: true });
-      const rows = db.prepare(`
-        SELECT b.title as title, p.url as url, f.title as folder
-        FROM moz_bookmarks b
-        JOIN moz_places p ON p.id = b.fk
-        LEFT JOIN moz_bookmarks f ON f.id = b.parent
-        WHERE b.type = 1 AND p.url LIKE 'http%'
-      `).all();
-      const list = rows.map(r => ({ title: r.title || r.url, url: r.url, groupPath: r.folder || 'Firefox' }));
-      applyImportedList(list);
-      return { ok: true, added: list.length };
+  try {
+    const ff = path.join(process.env.APPDATA, 'Mozilla/Firefox');
+    const profilesIni = path.join(ff, 'profiles.ini');
+    if (!fs.existsSync(profilesIni)) throw new Error('Firefox профиль не найден');
+    const ini = fs.readFileSync(profilesIni, 'utf-8');
+    const prof = /Path=(.*)/.exec(ini)?.[1];
+    if (!prof) throw new Error('Не удалось определить профиль Firefox');
+    const dbPath = path.join(ff, prof, 'places.sqlite');
+    if (!fs.existsSync(dbPath)) throw new Error('places.sqlite не найден');
+
+    // Пытаемся подгрузить better-sqlite3, если его нет — аккуратно сообщаем
+    let Database;
+    try {
+      Database = require('better-sqlite3');
+    } catch {
+      throw new Error('Импорт из Firefox недоступен в этой сборке (нет модуля better-sqlite3)');
     }
+
+    const db = new Database(dbPath, { readonly: true });
+    const rows = db.prepare(`
+      SELECT b.title as title, p.url as url, f.title as folder
+      FROM moz_bookmarks b
+      JOIN moz_places p ON p.id = b.fk
+      LEFT JOIN moz_bookmarks f ON f.id = b.parent
+      WHERE b.type = 1 AND p.url LIKE 'http%'
+    `).all();
+    const list = rows.map(r => ({ title: r.title || r.url, url: r.url, groupPath: r.folder || 'Firefox' }));
+    applyImportedList(list);
+    return { ok: true, added: list.length };
+  } catch (err){
+    return { ok: false, error: String(err) };
+  }
+}
 
     // JSON
     const { canceled, filePaths } = await dialog.showOpenDialog({
