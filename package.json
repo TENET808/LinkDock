@@ -28,7 +28,6 @@
     "directories": { "buildResources": "build" },
     "win": {
       "target": ["nsis", "portable"],
-      "icon": "build/icon.ico",
       "publisherName": "LinkDock"
     },
     "nsis": {
