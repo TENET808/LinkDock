@@ -1,0 +1,56 @@
+{
+  "name": "linkdock",
+  "version": "1.2.0",
+  "description": "Bookmark manager with groups, tags, drag&drop, hotkeys, window restore",
+  "main": "main.js",
+  "author": "LinkDock",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-packager . LinkDock --platform=win32 --arch=x64 --overwrite --icon=icon.ico",
+    "build": "electron-builder --win nsis",
+    "publish": "electron-builder --win nsis -p always"
+  },
+  "dependencies": {
+    "electron-store": "^9.0.0",
+    "electron-updater": "^6.3.0",
+    "better-sqlite3": "^9.4.0"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-packager": "^17.1.2",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.linkdock.app",
+    "productName": "LinkDock",
+    "asar": true,
+    "files": [
+      "**/*",
+      "!**/*.map"
+    ],
+    "directories": {
+      "buildResources": "build"
+    },
+    "win": {
+      "target": ["nsis"],
+      "icon": "build/icon.ico",
+      "publisherName": "LinkDock"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "LinkDock",
+      "artifactName": "LinkDock-Setup-${version}.exe"
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://example.com/linkdock-updates/"
+      }
+    ]
+  }
+}

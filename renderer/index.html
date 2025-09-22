@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self';" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LinkDock</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="side-header">
+        <h1>LinkDock</h1>
+        <div class="side-actions">
+          <button id="btnExport" class="btn">Экспорт</button>
+        </div>
+      </div>
+      <div class="import-group">
+        <button id="impChrome" class="btn">Импорт Chrome</button>
+        <button id="impEdge" class="btn">Импорт Edge</button>
+        <button id="impFirefox" class="btn">Импорт Firefox</button>
+        <button id="impJSON" class="btn">Импорт JSON</button>
+      </div>
+      <ul id="groupList" class="groups" draggable="false"></ul>
+      <div class="add-group">
+        <input id="newGroupName" placeholder="Новая группа" />
+        <button id="addGroupBtn" class="btn">+</button>
+      </div>
+    </aside>
+
+    <main class="content">
+      <div class="toolbar">
+        <input id="search" placeholder="Поиск (Ctrl+K)" />
+        <input id="title" placeholder="Название" />
+        <input id="url" placeholder="https://..." />
+        <input id="tags" placeholder="#теги через запятую" />
+        <button id="addBtn" class="btn">Добавить</button>
+      </div>
+      <ul id="list" class="list" draggable="false"></ul>
+    </main>
+  </div>
+
+  <template id="tplItem">
+    <li class="item" draggable="true">
+      <span class="pin" title="Закрепить">★</span>
+      <span class="title"></span>
+      <span class="url"></span>
+      <span class="taglist"></span>
+      <div class="item-actions">
+        <button class="btn open">Открыть</button>
+        <button class="btn move">Перенести</button>
+        <button class="btn edit">Изм.</button>
+        <button class="btn del">Удалить</button>
+      </div>
+    </li>
+  </template>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
