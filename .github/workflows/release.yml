@@ -3,16 +3,18 @@ name: Build & Release (Windows)
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - 'v*.*.*'   # пушим тег vX.Y.Z -> стартует сборка и релиз
+
+permissions:
+  contents: write  # чтобы загружать артефакты в Releases
 
 jobs:
   build-win:
     runs-on: windows-latest
 
     env:
-      # Кэшированные каталоги electron/electron-builder (ускоряет сборку и снижает обрывы скачиваний)
-      ELECTRON_CACHE: ${{ runner.temp }}\electron-cache
-      ELECTRON_BUILDER_CACHE: ${{ runner.temp }}\electron-builder
+      # Быстрый и надёжный зеркальный источник Electron
+      ELECTRON_MIRROR: https://github.com/electron/electron/releases/download/
 
     steps:
       - name: Checkout
@@ -22,25 +24,22 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          # cache НЕ включаем, чтобы не требовать lock-файл
 
       - name: Install deps
-        run: npm install
+        run: |
+          npm install --no-audit --no-fund
 
-      # === Опционально: сделать ICO из PNG (если icon.ico отсутствует) ===
-      # ВАЖНО: тут явный шелл pwsh и ПРАВИЛЬНО расставленные скобки вокруг Test-Path.
+      # Если есть PNG, но нет ICO — сделаем ICO на лету (не обязательно)
       - name: Make ICO from PNG (optional)
         shell: pwsh
         run: |
-          if ((Test-Path 'build/icon.png') -and -not (Test-Path 'build/icon.ico')) {
-            Write-Host "icon.ico not found, generating from icon.png..."
-            npx png-to-ico build/icon.png | Out-File -FilePath build/icon.ico -Encoding Byte
-          } else {
-            Write-Host "icon.png or icon.ico condition not met — skipping ICO generation."
+          if (Test-Path 'build/icon.png' -and -not (Test-Path 'build/icon.ico')) {
+            npx png-to-ico build/icon.png | Set-Content -Encoding Byte build/icon.ico
           }
 
       - name: Build & Publish to GitHub Releases
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: pwsh
         run: |
-          npx electron-builder --win nsi
+          npx electron-builder --win nsis portable -p always
