@@ -9,6 +9,12 @@ jobs:
   build-win:
     runs-on: windows-latest
 
+    # Кэш и зеркала для стабильных скачиваний Electron
+    env:
+      ELECTRON_CACHE: ${{ runner.temp }}\electron-cache
+      ELECTRON_BUILDER_CACHE: ${{ runner.temp }}\electron-builder
+      ELECTRON_MIRROR: https://github.com/electron/electron/releases/download/
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -18,24 +24,23 @@ jobs:
         with:
           node-version: 20
 
-      # Без lock-файла используем npm install (а не npm ci)
+      # Если у тебя НЕТ package-lock.json — используем npm install (а не npm ci)
       - name: Install deps
-        run: |
-          npm install --no-audit --no-fund
+        run: npm install
 
-      # Опционально: делаем ICO из PNG, если PNG есть и ICO ещё нет
+      # Генерация ICO из PNG при необходимости (PowerShell, правильная проверка)
       - name: Make ICO from PNG (optional)
         shell: pwsh
         run: |
-          if ( (Test-Path 'build/icon.png') -and -not (Test-Path 'build/icon.ico') ) {
-            node -e "require('png-to-ico')('build/icon.png').then(b=>require('fs').writeFileSync('build/icon.ico', b)).catch(e=>{console.error(e); process.exit(1)})"
-            Write-Host 'icon.ico создан из icon.png'
+          if ((Test-Path 'build/icon.png') -and -not (Test-Path 'build/icon.ico')) {
+            echo "PNG найден, ICO отсутствует — генерирую..."
+            npx png-to-ico build/icon.png | Set-Content -Encoding Byte build/icon.ico
           } else {
-            Write-Host 'icon.png не найден или icon.ico уже существует — пропускаем'
+            echo "Шаг пропущен: либо нет PNG, либо ICO уже существует."
           }
 
       - name: Build & Publish to GitHub Releases
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # встроенный токен Actions
         run: |
           npx electron-builder --win nsis portable -p always
