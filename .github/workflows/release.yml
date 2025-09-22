@@ -3,7 +3,7 @@ name: Build & Release (Windows)
 on:
   push:
     tags:
-      - 'v*.*.*'        # билд и релиз только по тегам вида v1.2.3
+      - 'v*.*.*'
 
 jobs:
   build-win:
@@ -17,22 +17,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          # ВАЖНО: не включаем cache: 'npm', чтобы не требовался lock-файл
 
       - name: Install deps
-        run: npm install
+        run: npm ci
 
-      # Опционально: если есть build/icon.png и нет build/icon.ico — сделаем .ico
-      # (скобки вокруг (Test-Path ...) обязательны, иначе pwsh думает, что -and это параметр)
-      - name: Make ICO from PNG (optional)
-        shell: pwsh
-        run: |
-          if ((Test-Path 'build/icon.png') -and -not (Test-Path 'build/icon.ico')) {
-            npx png-to-ico 'build/icon.png' | Set-Content -Encoding Byte 'build/icon.ico'
-          }
+      # Генерация ICO в node (никакого PowerShell)
+      - name: Prepare icon (optional)
+        run: npm run prebuild
 
       - name: Build & Publish to GitHub Releases
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          npx electron-builder --win nsis portable -p always
+        run: npx electron-builder --win nsis portable -p always
