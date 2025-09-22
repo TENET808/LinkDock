@@ -2,17 +2,12 @@ name: Build & Release (Windows)
 
 on:
   push:
-    tags:
-      - 'v*.*.*'         # пускаем сборку только по тегам релиза
-  workflow_dispatch:      # и руками из Actions
+    tags: ['v*.*.*']         # билд по тэгам vX.Y.Z
+  workflow_dispatch:         # и вручную из Actions
 
 jobs:
   build-win:
     runs-on: windows-latest
-    env:
-      # ускоряем electron/electron-builder за счет кэша
-      ELECTRON_CACHE: ${{ runner.temp }}\electron-cache
-      ELECTRON_BUILDER_CACHE: ${{ runner.temp }}\electron-builder
 
     steps:
       - name: Checkout
@@ -22,24 +17,40 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
 
-      # УСТОЙЧИВАЯ установка зависимостей:
-      # если есть package-lock/npm-shrinkwrap → npm ci, иначе → npm install
-      - name: Install deps
+      # Кэш бинарей Electron и electron-builder (ускоряет и лечит обрывы)
+      - name: Cache Electron caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~\AppData\Local\electron\Cache
+            ~\AppData\Local\electron-builder\Cache
+          key: electron-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            electron-${{ runner.os }}-
+
+      - name: Install deps (ci если есть lock, иначе i)
         shell: pwsh
         run: |
-          if (Test-Path 'package-lock.json' -or Test-Path 'npm-shrinkwrap.json') {
-            Write-Host "Lockfile found → npm ci"
+          if (Test-Path 'package-lock.json') {
             npm ci
           } else {
-            Write-Host "No lockfile → npm install"
-            npm install
+            npm install --no-audit --no-fund
           }
 
-      # Сборка и публикация на GitHub Releases
-      - name: Build & Publish to GitHub Releases
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # ICO генерировать не будем — просто проверим, что он есть
+      - name: Ensure build/icon.ico exists
         shell: pwsh
         run: |
-          npx electron-builder --win nsis portable -p always
+          if (-not (Test-Path 'build\icon.ico')) {
+            throw "Файл build\icon.ico не найден. Добавь его в репозиторий."
+          }
+
+      - name: Build & Publish to GitHub Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # electron-builder читает GH_TOKEN
+          # Зеркала — уменьшают шанс ERR_ELECTRON_BUILDER_CANNOT_EXECUTE
+          ELECTRON_MIRROR: https://github.com/electron/electron/releases/download/
+          ELECTRON_BUILDER_BINARIES_MIRROR: https://github.com/electron-userland/electron-builder-binaries/releases/download/
+        run: npx electron-builder --win nsis portable -p always
