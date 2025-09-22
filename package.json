@@ -1,6 +1,6 @@
 {
   "name": "linkdock",
-  "version": "1.3.4",
+  "version": "1.3.5",
   "description": "Bookmark manager with groups, tags, drag&drop, hotkeys, window restore",
   "main": "main.js",
   "author": "LinkDock",
