@@ -1,4 +1,9 @@
-name: Build & Release (Windows)
+- name: Build & Publish to GitHub Releases
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    npm_config_build_from_source: false
+  run: |
+    npx electron-builder --win nsis portable -p always
 on:
   push:
     tags:
