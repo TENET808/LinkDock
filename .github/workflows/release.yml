@@ -3,11 +3,16 @@ name: Build & Release (Windows)
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - 'v*.*.*'         # пускаем сборку только по тегам релиза
+  workflow_dispatch:      # и руками из Actions
 
 jobs:
   build-win:
     runs-on: windows-latest
+    env:
+      # ускоряем electron/electron-builder за счет кэша
+      ELECTRON_CACHE: ${{ runner.temp }}\electron-cache
+      ELECTRON_BUILDER_CACHE: ${{ runner.temp }}\electron-builder
 
     steps:
       - name: Checkout
@@ -18,14 +23,23 @@ jobs:
         with:
           node-version: 20
 
+      # УСТОЙЧИВАЯ установка зависимостей:
+      # если есть package-lock/npm-shrinkwrap → npm ci, иначе → npm install
       - name: Install deps
-        run: npm ci
+        shell: pwsh
+        run: |
+          if (Test-Path 'package-lock.json' -or Test-Path 'npm-shrinkwrap.json') {
+            Write-Host "Lockfile found → npm ci"
+            npm ci
+          } else {
+            Write-Host "No lockfile → npm install"
+            npm install
+          }
 
-      # Генерация ICO в node (никакого PowerShell)
-      - name: Prepare icon (optional)
-        run: npm run prebuild
-
+      # Сборка и публикация на GitHub Releases
       - name: Build & Publish to GitHub Releases
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --win nsis portable -p always
+        shell: pwsh
+        run: |
+          npx electron-builder --win nsis portable -p always
