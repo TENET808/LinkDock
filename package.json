@@ -1,44 +1,35 @@
 {
   "name": "linkdock",
-  "version": "1.2.1",
+  "version": "1.2.3",
   "description": "Bookmark manager with groups, tags, drag&drop, hotkeys, window restore",
   "main": "main.js",
   "author": "LinkDock",
   "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "pack": "electron-packager . LinkDock --platform=win32 --arch=x64 --overwrite --icon=icon.ico",
     "build": "electron-builder --win nsis portable",
     "publish": "electron-builder --win nsis portable -p always"
   },
   "dependencies": {
     "electron-store": "^9.0.0",
-    "electron-updater": "^6.3.0",
-    },
+    "electron-updater": "^6.3.0"
+  },
   "optionalDependencies": {
     "better-sqlite3": "^9.6.0"
-  }
+  },
   "devDependencies": {
     "electron": "^31.0.0",
-    "electron-packager": "^17.1.2",
-    "electron-builder": "^24.13.3"
+    "electron-builder": "^24.13.3",
+    "electron-packager": "^17.1.2"
   },
   "build": {
     "appId": "com.linkdock.app",
     "productName": "LinkDock",
     "asar": true,
-    "files": [
-      "**/*",
-      "!**/*.map"
-    ],
-    "directories": {
-      "buildResources": "build"
-    },
+    "files": ["**/*", "!**/*.map"],
+    "directories": { "buildResources": "build" },
     "win": {
-      "target": [
-        "nsis",
-        "portable"
-      ],
+      "target": ["nsis", "portable"],
       "icon": "build/icon.ico",
       "publisherName": "LinkDock"
     },
@@ -55,11 +46,7 @@
       "artifactName": "LinkDock-${version}-portable.exe"
     },
     "publish": [
-      {
-        "provider": "github",
-        "owner": "TENET808",
-        "repo": "LinkDock"
-      }
+      { "provider": "github", "owner": "TENET808", "repo": "LinkDock" }
     ]
   }
 }
