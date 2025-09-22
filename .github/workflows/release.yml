@@ -23,6 +23,8 @@ jobs:
           node-version: 20
           cache: 'npm'
 
+      - name: Make lockfile if missing
+        run: npm i --package-lock-only
       - name: Install deps
         run: npm ci
 
