@@ -11,7 +11,7 @@
     "publish": "electron-builder --win nsis portable -p always"
   },
   "dependencies": {
-    "electron-store": "^9.0.0",
+    "electron-store": "8.1.0",
     "electron-updater": "^6.3.0"
   },
   "devDependencies": {
