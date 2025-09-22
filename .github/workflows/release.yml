@@ -3,18 +3,11 @@ name: Build & Release (Windows)
 on:
   push:
     tags:
-      - 'v*.*.*'   # пушим тег vX.Y.Z -> стартует сборка и релиз
-
-permissions:
-  contents: write  # чтобы загружать артефакты в Releases
+      - 'v*.*.*'
 
 jobs:
   build-win:
     runs-on: windows-latest
-
-    env:
-      # Быстрый и надёжный зеркальный источник Electron
-      ELECTRON_MIRROR: https://github.com/electron/electron/releases/download/
 
     steps:
       - name: Checkout
@@ -24,18 +17,21 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          # cache НЕ включаем, чтобы не требовать lock-файл
 
+      # Без lock-файла используем npm install (а не npm ci)
       - name: Install deps
         run: |
           npm install --no-audit --no-fund
 
-      # Если есть PNG, но нет ICO — сделаем ICO на лету (не обязательно)
+      # Опционально: делаем ICO из PNG, если PNG есть и ICO ещё нет
       - name: Make ICO from PNG (optional)
         shell: pwsh
         run: |
-          if (Test-Path 'build/icon.png' -and -not (Test-Path 'build/icon.ico')) {
-            npx png-to-ico build/icon.png | Set-Content -Encoding Byte build/icon.ico
+          if ( (Test-Path 'build/icon.png') -and -not (Test-Path 'build/icon.ico') ) {
+            node -e "require('png-to-ico')('build/icon.png').then(b=>require('fs').writeFileSync('build/icon.ico', b)).catch(e=>{console.error(e); process.exit(1)})"
+            Write-Host 'icon.ico создан из icon.png'
+          } else {
+            Write-Host 'icon.png не найден или icon.ico уже существует — пропускаем'
           }
 
       - name: Build & Publish to GitHub Releases
