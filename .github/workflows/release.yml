@@ -1,18 +1,13 @@
+# .github/workflows/release.yml
 name: Build & Release (Windows)
 
 on:
   push:
-    tags:
-      - 'v*.*.*'   # билд запускается при пуше тега vX.Y.Z
+    tags: ['v*.*.*']
 
 jobs:
   build-win:
     runs-on: windows-latest
-
-    # Разрешаем экшенам писать в релизы (для загрузки артефактов)
-    permissions:
-      contents: write
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,28 +16,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          # ВАЖНО: не указывать cache: 'npm', раз нет lock-файла
 
-      - name: Make lockfile if missing
-        run: npm i --package-lock-only
       - name: Install deps
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
-      # Задаём переменные окружения через GITHUB_ENV,
-      # вместо проблемного ${{ runner.temp }}
-      - name: Prepare caches (ELECTRON_* paths)
-        shell: pwsh
-        run: |
-          echo "ELECTRON_CACHE=$env:RUNNER_TEMP\electron-cache"      >> $env:GITHUB_ENV
-          echo "ELECTRON_BUILDER_CACHE=$env:RUNNER_TEMP\electron-builder" >> $env:GITHUB_ENV
-          echo "ELECTRON_MIRROR=https://github.com/electron/electron/releases/download/" >> $env:GITHUB_ENV
-
-      # (Необязательно) если иконка лежит как PNG, собираем ICO
-      # - name: Make ICO from PNG
-      #   run: npx png-to-ico build/icon.png > build/icon.ico
-
-      - name: Build & publish to GitHub Releases
+      # (если у тебя есть шаг с зеркалом/кешем Electron — оставляй)
+      - name: Build & Publish to GitHub Releases
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          npx electron-builder --win nsis portable -p always
+        run: npx electron-builder --win nsis portable -p always
