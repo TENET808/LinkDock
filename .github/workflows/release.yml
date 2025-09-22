@@ -1,27 +1,28 @@
-- name: Build & Publish to GitHub Releases
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    npm_config_build_from_source: false
-  run: |
-    npx electron-builder --win nsis portable -p always
+name: Build & Release (Windows)
+
 on:
   push:
     tags:
       - 'v*.*.*'
+
 jobs:
   build-win:
     runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
+
       - name: Install deps
         run: npm install
+
       - name: Build & Publish to GitHub Releases
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          npm_config_build_from_source: false
         run: |
           npx electron-builder --win nsis portable -p always
