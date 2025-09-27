@@ -6,5 +6,7 @@ contextBridge.exposeInMainWorld('linkdock', {
   openLink: (url) => ipcRenderer.invoke('link:open', url),
   importBookmarks: (from) => ipcRenderer.invoke('file:importBookmarks', from),
   exportData: () => ipcRenderer.invoke('file:export'),
+  getTheme: () => ipcRenderer.invoke('ui:getTheme'),
+  setTheme: (t) => ipcRenderer.invoke('ui:setTheme', t),
   on: (ch, cb) => ipcRenderer.on(ch, (_e, ...args) => cb(...args))
 });
