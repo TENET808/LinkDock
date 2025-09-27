@@ -1,15 +1,18 @@
-name: Build & Release (Windows)
+name: Build & Release
 
 on:
-  workflow_dispatch:        # можно запустить руками
   push:
     tags:
-      - 'v*.*.*'            # собираем только по тэгам вида v1.2.3
+      - 'v*.*.*'
 
 jobs:
-  build-win:
-    runs-on: windows-latest
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
 
+    runs-on: ${{ matrix.os }}
+    
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -18,20 +21,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'        # просто кэшируем node_modules по lock-файлу (если он появится)
 
       - name: Install deps
-        run: npm install      # ставим deps так, чтобы не требовался package-lock.json
+        run: npm ci
 
-      # Если у тебя есть build/icon.png и НЕТ build/icon.ico — сделаем ICO корректно (без PowerShell-ошибок)
-      - name: Make ICO from PNG (optional)
-        shell: pwsh
-        run: |
-          if (Test-Path 'build/icon.png' -and -not (Test-Path 'build/icon.ico')) {
-            node -e "require('png-to-ico')('build/icon.png').then(b=>require('fs').writeFileSync('build/icon.ico', b))"
-          }
+      - name: Make ICO from PNG (for Windows)
+        if: runner.os == 'Windows'
+        run: npx png-to-ico build/icon.png > build/icon.ico
 
       - name: Build & Publish to GitHub Releases
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # выдаётся GitHub автоматически
-        run: npx electron-builder --win nsis portable -p always
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --publish always
