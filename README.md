@@ -7,7 +7,7 @@
 
 ### Сделано с помощью
 
-  * [][Electron-url]
+  * [Electron-url]
   * HTML5
   * CSS3
   * JavaScript
@@ -104,12 +104,6 @@ npm run build
 
 ## Контакты
 
-Автор проекта:(https://www.google.com/search?q=https://github.com/TENET808)
+Автор проекта: TENET808
 
-Ссылка на проект:(https://www.google.com/search?q=https://github.com/TENET808/LinkDock)
-
-```
-```
-
-[]: #
 [electron-url]: https://electronjs.org/
