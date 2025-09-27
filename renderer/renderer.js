@@ -84,6 +84,18 @@ function alphaSort(a,b){
   if (at < bt) return -1; if (at > bt) return 1; return 0;
 }
 
+// НОВАЯ ФУНКЦИЯ: Получаем URL иконки
+function getFaviconUrl(bookmarkUrl) {
+  if (!bookmarkUrl) return '';
+  try {
+    const url = new URL(bookmarkUrl);
+    // Используем сервис от Google для получения иконок нужного размера
+    return `https://www.google.com/s2/favicons?sz=32&domain_url=${url.origin}`;
+  } catch (e) {
+    return ''; // Возвращаем пустую строку, если URL некорректный
+  }
+}
+
 async function persist(){
   await window.linkdock.save('groups', state.groups);
   await window.linkdock.save('bookmarks', state.bookmarks);
@@ -107,7 +119,18 @@ async function onAdd(){
   const tagStr = norm(document.getElementById('tags').value);
   if (!u) return;
   const tags = tagStr ? tagStr.split(',').map(s=>s.trim()).filter(Boolean) : [];
-  const bm = { id: uid('b'), title: t || u, url: u, groupId: state.activeGroupId, tags, pinned: false };
+  
+  // ИЗМЕНЕНИЕ ЗДЕСЬ: Добавляем faviconUrl при создании
+  const bm = { 
+    id: uid('b'), 
+    title: t || u, 
+    url: u, 
+    groupId: state.activeGroupId, 
+    tags, 
+    pinned: false,
+    faviconUrl: getFaviconUrl(u) // Добавляем иконку
+  };
+
   state.bookmarks.push(bm);
   await persist();
   document.getElementById('title').value = '';
@@ -171,12 +194,23 @@ function renderList(){
   const ul = document.getElementById('list');
   ul.innerHTML = '';
   const tpl = document.getElementById('tplItem');
+  let shouldPersist = false; // Флаг, чтобы сохранить данные один раз в конце
 
   list.forEach(b => {
     const li = tpl.content.firstElementChild.cloneNode(true);
     li.dataset.id = b.id;
     if (b.pinned) li.classList.add('pinned');
 
+    // ИЗМЕНЕНИЕ ЗДЕСЬ: Отображаем иконку и добавляем для старых закладок
+    const favicon = li.querySelector('.favicon');
+    if (!b.faviconUrl) {
+      // Если у старой закладки нет иконки, генерируем и сохраняем
+      b.faviconUrl = getFaviconUrl(b.url);
+      shouldPersist = true;
+    }
+    favicon.src = b.faviconUrl;
+    favicon.onerror = () => { favicon.style.opacity = '0.5'; }; // Делаем иконку полупрозрачной, если она не загрузилась
+    
     // Display view
     li.querySelector('.title').textContent = b.title;
     li.querySelector('.url').textContent = b.url;
@@ -217,6 +251,8 @@ function renderList(){
     li.querySelector('.save').addEventListener('click', async () => {
       b.title = li.querySelector('.edit-title').value;
       b.url = li.querySelector('.edit-url').value;
+      // При сохранении обновляем иконку, если URL изменился
+      b.faviconUrl = getFaviconUrl(b.url);
       const newTags = li.querySelector('.edit-tags').value;
       b.tags = newTags ? newTags.split(',').map(s => s.trim()).filter(Boolean) : [];
       await persist();
@@ -234,6 +270,11 @@ function renderList(){
 
     ul.appendChild(li);
   });
+
+  // Если мы добавили иконки для старых закладок, сохраняем изменения
+  if (shouldPersist) {
+    persist();
+  }
 }
 
 // --- Логика перемещения ---
