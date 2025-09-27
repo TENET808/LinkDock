@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, session, Menu, globalShortcut } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, Menu, globalShortcut, nativeTheme } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const Store = require('electron-store');
@@ -7,9 +7,9 @@ const { autoUpdater } = require('electron-updater');
 const store = new Store({
   name: 'linkdock-data',
   defaults: {
-    ui: { bounds: { width: 1100, height: 700 } },
+    ui: { bounds: { width: 1100, height: 700 }, theme: 'light' },
     groups: [ { id: 'default', name: 'Общее', order: 0 } ],
-    bookmarks: [], // {id,title,url,groupId,tags:[..], pinned:boolean}
+    bookmarks: [],
     windows: {}
   }
 });
@@ -35,7 +35,6 @@ function createMainWindow(){
     store.set('ui.bounds', mainWindow.getBounds());
   });
 
-  // Menu & hotkeys
   const template = [
     { label: 'Файл', submenu: [
       { label: 'Импорт JSON', click: ()=> mainWindow.webContents.send('ui:importJSON') },
@@ -43,16 +42,50 @@ function createMainWindow(){
       { type: 'separator' },
       { role: 'quit', label: 'Выход' }
     ]},
-    { label: 'Правка', submenu: [ { role:'copy' }, { role:'paste' }, { role:'selectAll' } ] },
-    { label: 'Вид', submenu: [ { role:'reload' }, { role:'toggleDevTools' } ] }
+    { label: 'Правка', submenu: [ { role:'undo', label:'Отменить' }, { role:'redo', label:'Повторить' }, { type:'separator' }, { role:'copy', label:'Копировать' }, { role:'paste', label:'Вставить' }, { role:'selectAll', label:'Выделить всё' } ] },
+    { label: 'Вид', submenu: [
+      { label: 'Светлая тема', type: 'radio', checked: store.get('ui.theme')==='light', click: ()=> setTheme('light') },
+      { label: 'Тёмная тема',  type: 'radio', checked: store.get('ui.theme')==='dark',  click: ()=> setTheme('dark')  },
+      { type:'separator' },
+      { role:'reload', label:'Перезагрузить' },
+      { role:'toggleDevTools', label:'Инструменты разработчика' }
+    ]}
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 
   globalShortcut.register('Control+K', () => mainWindow.webContents.send('ui:focusSearch'));
 }
 
+function setTheme(theme){
+  store.set('ui.theme', theme);
+  nativeTheme.themeSource = theme === 'dark' ? 'dark' : 'light';
+  if (mainWindow) mainWindow.webContents.send('ui:theme', theme);
+}
+
+function backupData() {
+  const dataPath = store.path;
+  if (!fs.existsSync(dataPath)) return;
+
+  const backupDir = path.join(path.dirname(dataPath), 'backups');
+  if (!fs.existsSync(backupDir)) {
+    fs.mkdirSync(backupDir);
+  }
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const backupPath = path.join(backupDir, `linkdock-data-backup-${timestamp}.json`);
+  
+  try {
+    fs.copyFileSync(dataPath, backupPath);
+    console.log(`Backup created at: ${backupPath}`);
+  } catch (err) {
+    console.error('Failed to create backup:', err);
+  }
+}
+
 app.whenReady().then(() => {
+  setTheme(store.get('ui.theme'));
   createMainWindow();
+  // автообновления — для установочной версии
   autoUpdater.checkForUpdatesAndNotify();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
@@ -60,17 +93,12 @@ app.whenReady().then(() => {
 });
 
 app.on('will-quit', () => {
+  backupData();
   globalShortcut.unregisterAll();
 });
+app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
-});
-
-// Helpers
-function urlHash(url){
-  return Buffer.from(url).toString('base64').slice(0, 24);
-}
+function urlHash(url){ return Buffer.from(url).toString('base64').slice(0, 24); }
 
 function createLinkWindow(url){
   const hash = urlHash(url);
@@ -79,29 +107,21 @@ function createLinkWindow(url){
 
   const win = new BrowserWindow({
     ...winBounds,
-    webPreferences: {
-      partition,
-      sandbox: false
-    },
+    webPreferences: { partition, sandbox: false },
     title: url
   });
-
   win.loadURL(url);
-  win.on('close', () => {
-    store.set(`windows.${hash}` , win.getBounds());
-  });
+  win.on('close', () => store.set(`windows.${hash}` , win.getBounds()));
   return win;
 }
 
-// IPC API
 ipcMain.handle('store:getAll', () => store.store);
 ipcMain.handle('store:save', (e, payload) => { store.set(payload.key, payload.value); return true; });
+ipcMain.handle('ui:getTheme', () => store.get('ui.theme'));
+ipcMain.handle('ui:setTheme', (e, theme) => { setTheme(theme); return true; });
 
-ipcMain.handle('link:open', (e, url) => {
-  try { createLinkWindow(url); return { ok: true }; } catch (err) { return { ok: false, error: String(err) }; }
-});
+ipcMain.handle('link:open', (e, url) => { try { createLinkWindow(url); return { ok: true }; } catch (err) { return { ok: false, error: String(err) }; } });
 
-// Import Chrome/Edge/Firefox + JSON
 ipcMain.handle('file:importBookmarks', async (e, from) => {
   try {
     if (from === 'chrome' || from === 'edge'){
@@ -117,10 +137,7 @@ ipcMain.handle('file:importBookmarks', async (e, from) => {
       function walk(node, groupPath=[]){
         if (!node) return;
         if (node.type === 'url') list.push({ title: node.name, url: node.url, groupPath: groupPath.join(' / ') || 'Импорт' });
-        else if (node.children){
-          const gp = node.name ? [...groupPath, node.name] : groupPath;
-          node.children.forEach(ch => walk(ch, gp));
-        }
+        else if (node.children){ const gp = node.name ? [...groupPath, node.name] : groupPath; node.children.forEach(ch => walk(ch, gp)); }
       }
       ['bookmark_bar','other','synced'].forEach(k => walk(raw?.roots?.[k]));
       applyImportedList(list);
@@ -128,39 +145,28 @@ ipcMain.handle('file:importBookmarks', async (e, from) => {
     }
 
     if (from === 'firefox'){
-  try {
-    const ff = path.join(process.env.APPDATA, 'Mozilla/Firefox');
-    const profilesIni = path.join(ff, 'profiles.ini');
-    if (!fs.existsSync(profilesIni)) throw new Error('Firefox профиль не найден');
-    const ini = fs.readFileSync(profilesIni, 'utf-8');
-    const prof = /Path=(.*)/.exec(ini)?.[1];
-    if (!prof) throw new Error('Не удалось определить профиль Firefox');
-    const dbPath = path.join(ff, prof, 'places.sqlite');
-    if (!fs.existsSync(dbPath)) throw new Error('places.sqlite не найден');
-
-    // Пытаемся подгрузить better-sqlite3, если его нет — аккуратно сообщаем
-    let Database;
-    try {
-      Database = require('better-sqlite3');
-    } catch {
-      throw new Error('Импорт из Firefox недоступен в этой сборке (нет модуля better-sqlite3)');
+      const ff = path.join(process.env.APPDATA, 'Mozilla/Firefox');
+      const profilesIni = path.join(ff, 'profiles.ini');
+      if (!fs.existsSync(profilesIni)) throw new Error('Firefox профиль не найден');
+      const ini = fs.readFileSync(profilesIni, 'utf-8');
+      const prof = /Path=(.*)/.exec(ini)?.[1];
+      if (!prof) throw new Error('Не удалось определить профиль Firefox');
+      const dbPath = path.join(ff, prof, 'places.sqlite');
+      if (!fs.existsSync(dbPath)) throw new Error('places.sqlite не найден');
+      const Database = require('better-sqlite3');
+      const db = new Database(dbPath, { readonly: true });
+      const rows = db.prepare(`
+        SELECT b.title as title, p.url as url, f.title as folder
+        FROM moz_bookmarks b
+        JOIN moz_places p ON p.id = b.fk
+        LEFT JOIN moz_bookmarks f ON f.id = b.parent
+        WHERE b.type = 1 AND p.url LIKE 'http%'
+      `).all();
+      db.close();
+      const list = rows.map(r => ({ title: r.title || r.url, url: r.url, groupPath: r.folder || 'Firefox' }));
+      applyImportedList(list);
+      return { ok: true, added: list.length };
     }
-
-    const db = new Database(dbPath, { readonly: true });
-    const rows = db.prepare(`
-      SELECT b.title as title, p.url as url, f.title as folder
-      FROM moz_bookmarks b
-      JOIN moz_places p ON p.id = b.fk
-      LEFT JOIN moz_bookmarks f ON f.id = b.parent
-      WHERE b.type = 1 AND p.url LIKE 'http%'
-    `).all();
-    const list = rows.map(r => ({ title: r.title || r.url, url: r.url, groupPath: r.folder || 'Firefox' }));
-    applyImportedList(list);
-    return { ok: true, added: list.length };
-  } catch (err){
-    return { ok: false, error: String(err) };
-  }
-}
 
     // JSON
     const { canceled, filePaths } = await dialog.showOpenDialog({
@@ -174,9 +180,7 @@ ipcMain.handle('file:importBookmarks', async (e, from) => {
     store.set('groups', raw.groups);
     store.set('bookmarks', raw.bookmarks);
     return { ok: true, imported: raw.bookmarks.length };
-  } catch (err){
-    return { ok: false, error: String(err) };
-  }
+  } catch (err){ return { ok: false, error: String(err) }; }
 });
 
 function applyImportedList(list){
@@ -202,20 +206,9 @@ ipcMain.handle('file:export', async () => {
     defaultPath: 'linkdock-export.json'
   });
   if (canceled) return { ok: false, error: 'Отменено' };
-  fs.writeFileSync(filePath, JSON.stringify({
-    groups: store.get('groups'),
-    bookmarks: store.get('bookmarks')
-  }, null, 2), 'utf-8');
+  fs.writeFileSync(filePath, JSON.stringify({ groups: store.get('groups'), bookmarks: store.get('bookmarks') }, null, 2), 'utf-8');
   shell.showItemInFolder(filePath);
-  return { ok: true };
+  return { ok: true, path: filePath };
 });
 
-// Auto updates
-autoUpdater.on('update-downloaded', () => {
-  if (mainWindow) mainWindow.webContents.send('ui:updateReady');
-});
-
-// Quit & install handler
-ipcMain.handle('app:quitAndInstall', () => {
-  autoUpdater.quitAndInstall();
-});
+autoUpdater.on('update-downloaded', () => { if (mainWindow) mainWindow.webContents.send('ui:updateReady'); });
