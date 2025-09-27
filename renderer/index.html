@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.google.com; script-src 'self';" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>LinkDock</title>
   <link rel="stylesheet" href="styles.css" />
@@ -44,6 +44,7 @@
 
   <template id="tplItem">
     <li class="item" draggable="true">
+      <img src="" alt="" class="favicon" />
       <span class="pin" title="Закрепить">★</span>
       <div class="item-content">
         <div class="display-view">
