@@ -13,6 +13,7 @@
       <div class="side-header">
         <h1>LinkDock</h1>
         <div class="side-actions">
+          <button id="btnTheme" class="btn" title="Переключить тему">Тема</button>
           <button id="btnExport" class="btn">Экспорт</button>
         </div>
       </div>
@@ -44,17 +45,47 @@
   <template id="tplItem">
     <li class="item" draggable="true">
       <span class="pin" title="Закрепить">★</span>
-      <span class="title"></span>
-      <span class="url"></span>
-      <span class="taglist"></span>
+      <div class="item-content">
+        <div class="display-view">
+          <span class="title"></span>
+          <span class="url"></span>
+          <div class="taglist"></div>
+        </div>
+        <div class="edit-view">
+          <input class="edit-title" placeholder="Название" />
+          <input class="edit-url" placeholder="URL" />
+          <input class="edit-tags" placeholder="Теги через запятую" />
+        </div>
+      </div>
       <div class="item-actions">
-        <button class="btn open">Открыть</button>
-        <button class="btn move">Перенести</button>
-        <button class="btn edit">Изм.</button>
-        <button class="btn del">Удалить</button>
+        <div class="display-actions">
+          <button class="btn open">Открыть</button>
+          <button class="btn move">Перенести</button>
+          <button class="btn edit">Изм.</button>
+          <button class="btn del">Удалить</button>
+        </div>
+        <div class="edit-actions">
+          <button class="btn save">Сохранить</button>
+          <button class="btn cancel">Отмена</button>
+        </div>
       </div>
     </li>
   </template>
+
+  <div id="moveModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <h3>Переместить закладку</h3>
+      <p>Выберите существующую группу или введите имя новой.</p>
+      <select id="moveGroupSelect"></select>
+      <input id="moveNewGroupInput" placeholder="Или имя новой группы..." />
+      <div class="modal-actions">
+        <button id="moveConfirmBtn" class="btn">Переместить</button>
+        <button id="moveCancelBtn" class="btn">Отмена</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="notifications"></div>
 
   <script src="renderer.js"></script>
 </body>
