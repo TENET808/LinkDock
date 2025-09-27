@@ -1,42 +1,5 @@
 # LinkDock
-О проекте
-
-\<br /\>
-\<div align="center"\>
-\<a href="[https://github.com/TENET808/LinkDock](https://www.google.com/search?q=https://github.com/TENET808/LinkDock)"\>
-\<img src="images/logo.png" alt="Logo" width="80" height="80"\>
-\</a\>
-
-\<h1 align="center"\>LinkDock\</h1\>
-
-\<p align="center"\>
-Простой, элегантный и мощный менеджер ссылок для вашего рабочего стола Windows 10.
-\<br /\>
-\<a href="[https://github.com/TENET808/LinkDock/issues](https://www.google.com/search?q=https://github.com/TENET808/LinkDock/issues)"\>Сообщить об ошибке\</a\>
-·
-\<a href="[https://github.com/TENET808/LinkDock/issues](https://www.google.com/search?q=https://github.com/TENET808/LinkDock/issues)"\>Предложить улучшение\</a\>
-\</p\>
-\</div\>
-
-\<div align="center"\>
-\<a href="[https://github.com/TENET808/LinkDock/actions/workflows/main.yml](https://www.google.com/search?q=https://github.com/TENET808/LinkDock/actions/workflows/main.yml)"\>
-\<img src="[https://img.shields.io/github/actions/workflow/status/TENET808/LinkDock/main.yml?style=for-the-badge](https://www.google.com/search?q=https://img.shields.io/github/actions/workflow/status/TENET808/LinkDock/main.yml%3Fstyle%3Dfor-the-badge)" alt="Build Status"\>
-\</a\>
-\<a href="[https://github.com/TENET808/LinkDock/releases/latest](https://www.google.com/search?q=https://github.com/TENET808/LinkDock/releases/latest)"\>
-\<img src="[https://img.shields.io/github/v/release/TENET808/LinkDock?style=for-the-badge](https://www.google.com/search?q=https://img.shields.io/github/v/release/TENET808/LinkDock%3Fstyle%3Dfor-the-badge)" alt="Latest Release"\>
-\</a\>
-\<a href="[https://github.com/TENET808/LinkDock/blob/main/LICENSE](https://www.google.com/search?q=https://github.com/TENET808/LinkDock/blob/main/LICENSE)"\>
-\<img src="[https://img.shields.io/github/license/TENET808/LinkDock?style=for-the-badge](https://www.google.com/search?q=https://img.shields.io/github/license/TENET808/LinkDock%3Fstyle%3Dfor-the-badge)" alt="License"\>
-\</a\>
-\<a href="[https://github.com/TENET808/LinkDock/releases](https://www.google.com/search?q=https://github.com/TENET808/LinkDock/releases)"\>
-\<img src="[https://img.shields.io/github/downloads/TENET808/LinkDock/total?style=for-the-badge](https://www.google.com/search?q=https://img.shields.io/github/downloads/TENET808/LinkDock/total%3Fstyle%3Dfor-the-badge)" alt="Downloads"\>
-\</a\>
-\</div\>
-<br>
-
 ## О проекте
-
-\!(images/screenshot.png)
 
 Устали от загроможденных закладок браузера или беспорядочных текстовых файлов со ссылками? LinkDock предоставляет чистый, сфокусированный интерфейс для хранения ваших ссылок вдали от шума браузера.
 
