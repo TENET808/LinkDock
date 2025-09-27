@@ -1,6 +1,6 @@
 {
   "name": "linkdock",
-  "version": "1.3.4",
+  "version": "1.3.8",
   "description": "Менеджер ссылок с группами, тегами, поиском, тёмной темой и восстановлением окон",
   "main": "main.js",
   "author": "LinkDock",
