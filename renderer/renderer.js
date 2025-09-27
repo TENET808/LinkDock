@@ -1,72 +1,106 @@
 const state = { groups: [], bookmarks: [], activeGroupId: null, search: '' };
 let dragSrcId = null; // DnD
 
+// --- Инициализация ---
 (async function init(){
   const all = await window.linkdock.getAll();
   state.groups = all.groups;
   state.bookmarks = all.bookmarks;
   state.activeGroupId = state.groups[0]?.id || null;
+
+  const theme = await window.linkdock.getTheme();
+  applyTheme(theme);
+
   bindUI();
   renderGroups();
   renderList();
-
-  window.linkdock.on('ui:focusSearch', ()=> document.getElementById('search').focus());
-  window.linkdock.on('ui:importJSON', ()=> doImport('json'));
-  window.linkdock.on('ui:export', async ()=> { await window.linkdock.exportData(); });
-  window.linkdock.on('ui:updateReady', ()=> {
-    const yes = confirm('Доступно обновление LinkDock. Перезапустить сейчас для установки?');
-    if (yes) require('electron').ipcRenderer.invoke('app:quitAndInstall');
-  });
+  bindElectronEvents();
 })();
 
+function bindElectronEvents() {
+  window.linkdock.on('ui:focusSearch', ()=> document.getElementById('search').focus());
+  window.linkdock.on('ui:importJSON', ()=> doImport('json'));
+  window.linkdock.on('ui:export', async ()=> { 
+    const res = await window.linkdock.exportData();
+    if(res.ok) showNotification(`Экспорт сохранен в ${res.path}`, 'success');
+  });
+  window.linkdock.on('ui:theme', (t)=> applyTheme(t));
+  window.linkdock.on('ui:updateReady', ()=> {
+    const yes = confirm('Доступно обновление LinkDock. Перезапустить сейчас для установки?');
+    if (yes) location.reload();
+  });
+}
+
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+}
+
+// --- Привязка UI ---
 function bindUI(){
   document.getElementById('addBtn').addEventListener('click', onAdd);
   document.getElementById('addGroupBtn').addEventListener('click', onAddGroup);
+  
+  const addInputs = ['title', 'url', 'tags'];
+  addInputs.forEach(id => {
+    document.getElementById(id).addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') onAdd();
+    });
+  });
+
+  document.getElementById('btnTheme').addEventListener('click', async ()=>{
+    const cur = document.documentElement.getAttribute('data-theme') || 'light';
+    const next = cur === 'light' ? 'dark' : 'light';
+    applyTheme(next);
+    await window.linkdock.setTheme(next);
+  });
+  
   document.getElementById('search').addEventListener('input', (e)=>{ state.search = e.target.value.trim().toLowerCase(); renderList(); });
+  
   document.getElementById('impChrome').addEventListener('click', ()=> doImport('chrome'));
   document.getElementById('impEdge').addEventListener('click', ()=> doImport('edge'));
   document.getElementById('impFirefox').addEventListener('click', ()=> doImport('firefox'));
   document.getElementById('impJSON').addEventListener('click', ()=> doImport('json'));
-  document.getElementById('btnExport').addEventListener('click', async ()=> { await window.linkdock.exportData(); });
+
+  document.getElementById('btnExport').addEventListener('click', async () => {
+    const res = await window.linkdock.exportData();
+    if (res.ok) showNotification(`Экспорт успешно сохранен`, 'success');
+    else if(res.error !== 'Отменено') showNotification(res.error, 'error');
+  });
+
+  // Modal bindings
+  document.getElementById('moveCancelBtn').addEventListener('click', closeMoveModal);
+  document.getElementById('moveConfirmBtn').addEventListener('click', handleMoveBookmark);
+  document.querySelector('.modal-overlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeMoveModal();
+  });
 }
 
+// --- Утилиты ---
 function uid(prefix){ return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2)}`; }
+function norm(str){ return (str||'').trim(); }
+function alphaSort(a,b){
+  const at = (a.title||'').toLowerCase();
+  const bt = (b.title||'').toLowerCase();
+  if (at < bt) return -1; if (at > bt) return 1; return 0;
+}
 
 async function persist(){
   await window.linkdock.save('groups', state.groups);
   await window.linkdock.save('bookmarks', state.bookmarks);
 }
 
-function renderGroups(){
-  const ul = document.getElementById('groupList');
-  ul.innerHTML = '';
-  state.groups.sort((a,b)=> a.order - b.order).forEach(g => {
-    const li = document.createElement('li');
-    li.textContent = g.name;
-    li.className = (g.id === state.activeGroupId) ? 'active' : '';
-
-    // Drag&Drop групп
-    li.draggable = true;
-    li.addEventListener('dragstart', ()=> { li.classList.add('dragging'); dragSrcId = g.id; });
-    li.addEventListener('dragend', ()=> { li.classList.remove('dragging'); dragSrcId = null; persist(); });
-    li.addEventListener('dragover', (e)=> { e.preventDefault(); li.classList.add('dragover'); });
-    li.addEventListener('dragleave', ()=> li.classList.remove('dragover'));
-    li.addEventListener('drop', ()=> {
-      li.classList.remove('dragover');
-      if (!dragSrcId || dragSrcId === g.id) return;
-      const src = state.groups.find(x=>x.id===dragSrcId);
-      const dst = g;
-      const srcOrder = src.order; src.order = dst.order; dst.order = srcOrder;
-      renderGroups(); renderList();
-    });
-
-    li.addEventListener('click', ()=> { state.activeGroupId = g.id; renderGroups(); renderList(); });
-    ul.appendChild(li);
-  });
+function showNotification(message, type = 'info', duration = 3000) {
+  const container = document.getElementById('notifications');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.remove();
+  }, duration);
 }
 
-function norm(str){ return (str||'').trim(); }
-
+// --- Управление данными ---
 async function onAdd(){
   const t = norm(document.getElementById('title').value);
   const u = norm(document.getElementById('url').value);
@@ -105,10 +139,31 @@ function filtered(){
   );
 }
 
-function alphaSort(a,b){
-  const at = (a.title||'').toLowerCase();
-  const bt = (b.title||'').toLowerCase();
-  if (at < bt) return -1; if (at > bt) return 1; return 0;
+// --- Рендеринг ---
+function renderGroups(){
+  const ul = document.getElementById('groupList');
+  ul.innerHTML = '';
+  state.groups.sort((a,b)=> a.order - b.order).forEach(g => {
+    const li = document.createElement('li');
+    li.textContent = g.name;
+    li.className = (g.id === state.activeGroupId) ? 'active' : '';
+
+    li.draggable = true;
+    li.addEventListener('dragstart', ()=> { li.classList.add('dragging'); dragSrcId = g.id; });
+    li.addEventListener('dragend', ()=> { li.classList.remove('dragging'); dragSrcId = null; persist(); });
+    li.addEventListener('dragover', (e)=> { e.preventDefault(); li.classList.add('dragover'); });
+    li.addEventListener('dragleave', ()=> li.classList.remove('dragover'));
+    li.addEventListener('drop', ()=> {
+      li.classList.remove('dragover');
+      if (!dragSrcId || dragSrcId === g.id) return;
+      const src = state.groups.find(x=>x.id===dragSrcId);
+      const dst = g; const srcOrder = src.order; src.order = dst.order; dst.order = srcOrder;
+      renderGroups(); renderList();
+    });
+
+    li.addEventListener('click', ()=> { state.activeGroupId = g.id; renderGroups(); renderList(); });
+    ul.appendChild(li);
+  });
 }
 
 function renderList(){
@@ -116,44 +171,62 @@ function renderList(){
   const ul = document.getElementById('list');
   ul.innerHTML = '';
   const tpl = document.getElementById('tplItem');
+
   list.forEach(b => {
     const li = tpl.content.firstElementChild.cloneNode(true);
     li.dataset.id = b.id;
     if (b.pinned) li.classList.add('pinned');
 
-    li.querySelector('.pin').addEventListener('click', async () => {
-      b.pinned = !b.pinned; await persist(); renderList();
-    });
+    // Display view
     li.querySelector('.title').textContent = b.title;
     li.querySelector('.url').textContent = b.url;
-    li.querySelector('.taglist').textContent = (b.tags||[]).map(t=>`#${t}`).join(', ');
-    li.querySelector('.open').addEventListener('click', () => window.linkdock.openLink(b.url));
-    li.querySelector('.del').addEventListener('click', async () => {
-      state.bookmarks = state.bookmarks.filter(x => x.id !== b.id);
-      await persist();
-      renderList();
-    });
-    li.querySelector('.edit').addEventListener('click', async () => {
-      const title = prompt('Название', b.title);
-      const url = prompt('URL', b.url);
-      const tags = prompt('Теги через запятую', (b.tags||[]).join(','));
-      if (title) b.title = title;
-      if (url) b.url = url;
-      b.tags = tags ? tags.split(',').map(s=>s.trim()).filter(Boolean) : [];
-      await persist(); renderList();
-    });
-    li.querySelector('.move').addEventListener('click', async () => {
-      const name = prompt('Переместить в группу (новая/существующая):', 'Общее');
-      if (!name) return;
-      let g = state.groups.find(x => x.name.toLowerCase() === name.toLowerCase());
-      if (!g){ g = { id: uid('g'), name, order: state.groups.length }; state.groups.push(g); }
-      b.groupId = g.id;
-      await persist();
-      renderGroups();
-      renderList();
+    const taglist = li.querySelector('.taglist');
+    taglist.innerHTML = '';
+    (b.tags||[]).forEach(t => {
+      const tagEl = document.createElement('span');
+      tagEl.className = 'tag';
+      tagEl.textContent = `#${t}`;
+      tagEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.getElementById('search').value = t;
+        state.search = t.toLowerCase();
+        renderList();
+      });
+      taglist.appendChild(tagEl);
     });
 
-    // Drag&Drop закладок (внутри группы)
+    // Edit view
+    li.querySelector('.edit-title').value = b.title;
+    li.querySelector('.edit-url').value = b.url;
+    li.querySelector('.edit-tags').value = (b.tags||[]).join(', ');
+
+    // Actions
+    li.querySelector('.pin').addEventListener('click', async () => { b.pinned = !b.pinned; await persist(); renderList(); });
+    li.querySelector('.open').addEventListener('click', () => window.linkdock.openLink(b.url));
+    li.querySelector('.del').addEventListener('click', async () => {
+      if (confirm(`Вы уверены, что хотите удалить закладку "${b.title}"?`)) {
+        state.bookmarks = state.bookmarks.filter(x => x.id !== b.id); 
+        await persist(); 
+        renderList();
+      }
+    });
+    
+    // Inline editing handlers
+    li.querySelector('.edit').addEventListener('click', () => li.classList.add('editing'));
+    li.querySelector('.cancel').addEventListener('click', () => li.classList.remove('editing'));
+    li.querySelector('.save').addEventListener('click', async () => {
+      b.title = li.querySelector('.edit-title').value;
+      b.url = li.querySelector('.edit-url').value;
+      const newTags = li.querySelector('.edit-tags').value;
+      b.tags = newTags ? newTags.split(',').map(s => s.trim()).filter(Boolean) : [];
+      await persist();
+      renderList(); // Re-render to show updated values and exit editing mode
+    });
+
+    // Move
+    li.querySelector('.move').addEventListener('click', () => openMoveModal(b.id));
+
+    // Drag&Drop
     li.addEventListener('dragstart', ()=> { li.classList.add('dragging'); dragSrcId = b.id; });
     li.addEventListener('dragend', async ()=> { li.classList.remove('dragging'); dragSrcId = null; await persist(); });
     li.addEventListener('dragover', (e)=> e.preventDefault());
@@ -163,6 +236,56 @@ function renderList(){
   });
 }
 
+// --- Логика перемещения ---
+let bookmarkToMoveId = null;
+
+function openMoveModal(bookmarkId) {
+  bookmarkToMoveId = bookmarkId;
+  const select = document.getElementById('moveGroupSelect');
+  select.innerHTML = '';
+  state.groups.sort((a,b)=>a.order-b.order).forEach(g => {
+    const option = document.createElement('option');
+    option.value = g.id;
+    option.textContent = g.name;
+    select.appendChild(option);
+  });
+  document.getElementById('moveNewGroupInput').value = '';
+  document.getElementById('moveModal').style.display = 'flex';
+}
+
+function closeMoveModal() {
+  document.getElementById('moveModal').style.display = 'none';
+  bookmarkToMoveId = null;
+}
+
+async function handleMoveBookmark() {
+  if (!bookmarkToMoveId) return;
+
+  const bookmark = state.bookmarks.find(b => b.id === bookmarkToMoveId);
+  const newGroupName = norm(document.getElementById('moveNewGroupInput').value);
+  let groupId;
+
+  if (newGroupName) {
+    let group = state.groups.find(g => g.name.toLowerCase() === newGroupName.toLowerCase());
+    if (!group) {
+      group = { id: uid('g'), name: newGroupName, order: state.groups.length };
+      state.groups.push(group);
+    }
+    groupId = group.id;
+  } else {
+    groupId = document.getElementById('moveGroupSelect').value;
+  }
+
+  if (bookmark && groupId) {
+    bookmark.groupId = groupId;
+    await persist();
+    renderGroups();
+    renderList();
+  }
+  closeMoveModal();
+}
+
+// --- Drag & Drop ---
 function reorderBookmark(dstId){
   if (!dragSrcId || dragSrcId === dstId) return;
   const inGroup = state.bookmarks.filter(x => x.groupId === state.activeGroupId);
@@ -171,16 +294,23 @@ function reorderBookmark(dstId){
   const to = order.indexOf(dstId);
   if (from === -1 || to === -1) return;
   order.splice(to, 0, order.splice(from,1)[0]);
-  // apply new order: rebuild group items + others
   const others = state.bookmarks.filter(x => x.groupId !== state.activeGroupId);
   const reordered = order.map(id => inGroup.find(x=>x.id===id));
   state.bookmarks = others.concat(reordered);
   renderList();
 }
 
+// --- Импорт ---
 async function doImport(kind){
   const res = await window.linkdock.importBookmarks(kind);
-  if (!res?.ok) { alert(res?.error || 'Ошибка импорта'); return; }
+  if (!res?.ok) { 
+    if (res.error !== 'Отменено') showNotification(res?.error || 'Ошибка импорта', 'error');
+    return;
+  }
+  
+  if (res.added > 0) showNotification(`Импортировано ${res.added} закладок`, 'success');
+  if (res.imported > 0) showNotification(`Импортировано ${res.imported} закладок`, 'success');
+  
   const all = await window.linkdock.getAll();
   state.groups = all.groups; state.bookmarks = all.bookmarks;
   if (!state.activeGroupId && state.groups[0]) state.activeGroupId = state.groups[0].id;
