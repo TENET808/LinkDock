@@ -37,16 +37,14 @@ body { margin:0; font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial
 .add-group input { flex:1; }
 .content { padding:12px; display:flex; flex-direction:column; gap:12px; }
 .toolbar { display:grid; grid-template-columns: 1fr 1fr 2fr 1fr auto; gap:8px; }
-input, select { padding:8px; border:1px solid var(--border); border-radius:8px; background:var(--panel); color:var(--fg); width: 100%; }
+input, select, textarea { padding:8px; border:1px solid var(--border); border-radius:8px; background:var(--panel); color:var(--fg); width: 100%; font-family: inherit; }
 .list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; overflow:auto; flex:1; }
-/* ИЗМЕНЕНИЕ ЗДЕСЬ: Обновили grid-template-columns */
 .item { display:grid; grid-template-columns: 20px 24px 1fr auto; gap:10px; align-items:center; padding:8px; border:1px solid var(--border); border-radius:10px; background:var(--panel); }
-/* НОВЫЙ КОД ЗДЕСЬ: Стили для иконки */
 .item .favicon {
   width: 20px;
   height: 20px;
   border-radius: 4px;
-  background-color: var(--border); /* Фон на случай если иконка не загрузится */
+  background-color: var(--border);
 }
 .item-content { display:flex; flex-direction:column; gap:4px; overflow: hidden; }
 .item .title { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -54,6 +52,14 @@ input, select { padding:8px; border:1px solid var(--border); border-radius:8px; 
 .item .taglist { color:var(--muted); font-size:12px; opacity:.9; }
 .item .taglist .tag { cursor: pointer; background: rgba(127,127,127,0.1); padding: 2px 5px; border-radius: 4px; margin-right: 4px; }
 .item .taglist .tag:hover { background: rgba(127,127,127,0.2); }
+/* НОВЫЙ КОД: Стили для заметки */
+.item .notes-display {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: pre-wrap;
+  margin-top: 4px;
+  padding-left: 2px;
+}
 .item .pin { cursor:pointer; user-select:none; opacity:.4; }
 .item.pinned .pin { opacity:1; }
 .item.dragging { opacity:.6; }
