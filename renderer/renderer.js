@@ -84,15 +84,13 @@ function alphaSort(a,b){
   if (at < bt) return -1; if (at > bt) return 1; return 0;
 }
 
-// НОВАЯ ФУНКЦИЯ: Получаем URL иконки
 function getFaviconUrl(bookmarkUrl) {
   if (!bookmarkUrl) return '';
   try {
     const url = new URL(bookmarkUrl);
-    // Используем сервис от Google для получения иконок нужного размера
     return `https://www.google.com/s2/favicons?sz=32&domain_url=${url.origin}`;
   } catch (e) {
-    return ''; // Возвращаем пустую строку, если URL некорректный
+    return '';
   }
 }
 
@@ -120,7 +118,7 @@ async function onAdd(){
   if (!u) return;
   const tags = tagStr ? tagStr.split(',').map(s=>s.trim()).filter(Boolean) : [];
   
-  // ИЗМЕНЕНИЕ ЗДЕСЬ: Добавляем faviconUrl при создании
+  // ИЗМЕНЕНИЕ: Добавляем пустое поле notes при создании
   const bm = { 
     id: uid('b'), 
     title: t || u, 
@@ -128,7 +126,8 @@ async function onAdd(){
     groupId: state.activeGroupId, 
     tags, 
     pinned: false,
-    faviconUrl: getFaviconUrl(u) // Добавляем иконку
+    faviconUrl: getFaviconUrl(u),
+    notes: '' // Добавляем поле для заметок
   };
 
   state.bookmarks.push(bm);
@@ -158,7 +157,8 @@ function filtered(){
   return sorted.filter(b =>
     (b.title||'').toLowerCase().includes(state.search) ||
     (b.url||'').toLowerCase().includes(state.search) ||
-    (b.tags||[]).some(t=> t.toLowerCase().includes(state.search))
+    (b.tags||[]).some(t=> t.toLowerCase().includes(state.search)) ||
+    (b.notes||'').toLowerCase().includes(state.search) // ИЗМЕНЕНИЕ: Ищем также по заметкам
   );
 }
 
@@ -194,26 +194,32 @@ function renderList(){
   const ul = document.getElementById('list');
   ul.innerHTML = '';
   const tpl = document.getElementById('tplItem');
-  let shouldPersist = false; // Флаг, чтобы сохранить данные один раз в конце
+  let shouldPersist = false; 
 
   list.forEach(b => {
     const li = tpl.content.firstElementChild.cloneNode(true);
     li.dataset.id = b.id;
     if (b.pinned) li.classList.add('pinned');
 
-    // ИЗМЕНЕНИЕ ЗДЕСЬ: Отображаем иконку и добавляем для старых закладок
     const favicon = li.querySelector('.favicon');
     if (!b.faviconUrl) {
-      // Если у старой закладки нет иконки, генерируем и сохраняем
       b.faviconUrl = getFaviconUrl(b.url);
       shouldPersist = true;
     }
     favicon.src = b.faviconUrl;
-    favicon.onerror = () => { favicon.style.opacity = '0.5'; }; // Делаем иконку полупрозрачной, если она не загрузилась
+    favicon.onerror = () => { favicon.style.opacity = '0.5'; }; 
     
     // Display view
     li.querySelector('.title').textContent = b.title;
     li.querySelector('.url').textContent = b.url;
+    // ИЗМЕНЕНИЕ: Отображаем заметку
+    const notesDisplay = li.querySelector('.notes-display');
+    if (b.notes) {
+      notesDisplay.textContent = b.notes;
+    } else {
+      notesDisplay.style.display = 'none';
+    }
+
     const taglist = li.querySelector('.taglist');
     taglist.innerHTML = '';
     (b.tags||[]).forEach(t => {
@@ -233,6 +239,9 @@ function renderList(){
     li.querySelector('.edit-title').value = b.title;
     li.querySelector('.edit-url').value = b.url;
     li.querySelector('.edit-tags').value = (b.tags||[]).join(', ');
+    // ИЗМЕНЕНИЕ: Заполняем поле редактирования заметки
+    li.querySelector('.edit-notes').value = b.notes || '';
+
 
     // Actions
     li.querySelector('.pin').addEventListener('click', async () => { b.pinned = !b.pinned; await persist(); renderList(); });
@@ -251,12 +260,13 @@ function renderList(){
     li.querySelector('.save').addEventListener('click', async () => {
       b.title = li.querySelector('.edit-title').value;
       b.url = li.querySelector('.edit-url').value;
-      // При сохранении обновляем иконку, если URL изменился
       b.faviconUrl = getFaviconUrl(b.url);
       const newTags = li.querySelector('.edit-tags').value;
       b.tags = newTags ? newTags.split(',').map(s => s.trim()).filter(Boolean) : [];
+      // ИЗМЕНЕНИЕ: Сохраняем заметку
+      b.notes = li.querySelector('.edit-notes').value.trim();
       await persist();
-      renderList(); // Re-render to show updated values and exit editing mode
+      renderList(); 
     });
 
     // Move
@@ -271,7 +281,6 @@ function renderList(){
     ul.appendChild(li);
   });
 
-  // Если мы добавили иконки для старых закладок, сохраняем изменения
   if (shouldPersist) {
     persist();
   }
