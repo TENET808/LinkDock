@@ -3,18 +3,18 @@ const path = require('path');
 const fs = require('fs');
 const Store = require('electron-store');
 const { autoUpdater } = require('electron-updater');
-const http = require('http');
-const https = require('https');
-
+const http = require('http'); // ДОБАВЛЕНО: для проверки HTTP-ссылок
+const https = require('https'); // ДОБАВЛЕНО: для проверки HTTPS-ссылок
+const Database = require('better-sqlite3'); // Переносим сюда, так как используется в main.js для Firefox
 
 // --- ХРАНИЛИЩЕ ---
 const store = new Store({
   name: 'linkdock-data',
   defaults: {
-    ui: { 
-      bounds: { width: 1100, height: 700 }, 
+    ui: {
+      bounds: { width: 1100, height: 700 },
       theme: 'light',
-      minimizeToTray: false 
+      minimizeToTray: false
     },
     groups: [ { id: 'default', name: 'Общее', order: 0 } ],
     bookmarks: [],
@@ -27,19 +27,19 @@ let tray = null;
 
 // --- ФУНКЦИЯ СОЗДАНИЯ ТРЕЯ ---
 function createTray() {
-  const iconPath = path.join(__dirname, 'build/icon.png'); 
+  const iconPath = path.join(__dirname, 'build/icon.png');
   const icon = nativeImage.createFromPath(iconPath);
   tray = new Tray(icon);
-  
+
   const contextMenu = Menu.buildFromTemplate([
     { label: 'Развернуть', click: () => {
       if (mainWindow) mainWindow.show();
     }},
     { type: 'separator' },
-    { label: 'Выход', click: () => { 
+    { label: 'Выход', click: () => {
         app.isQuitting = true;
-        app.quit(); 
-      } 
+        app.quit();
+      }
     }
   ]);
   tray.setToolTip('LinkDock');
@@ -66,7 +66,7 @@ function createMainWindow(){
     title: 'LinkDock'
   });
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
-  
+
   mainWindow.on('close', (event) => {
     store.set('ui.bounds', mainWindow.getBounds());
     if (store.get('ui.minimizeToTray') && !app.isQuitting) {
@@ -91,12 +91,19 @@ function createMainWindow(){
       { role:'toggleDevTools', label:'Инструменты разработчика' }
     ]},
     { label: 'Настройки', submenu: [
-      { 
-        label: 'Сворачивать в трей', 
-        type: 'checkbox', 
+      {
+        label: 'Сворачивать в трей',
+        type: 'checkbox',
         checked: store.get('ui.minimizeToTray'),
         click: (item) => store.set('ui.minimizeToTray', item.checked)
-      }
+      },
+      // ДОБАВЛЕНО: Пункт меню для запуска проверки ссылок
+      { type: 'separator' },
+      { label: 'Проверить все ссылки', click: () => {
+          if (mainWindow) {
+            mainWindow.webContents.send('links:startCheck'); // Отправляем сигнал на начало проверки
+          }
+      }},
     ]}
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
@@ -123,53 +130,66 @@ function backupData() {
   }
 }
 
-// --- ЛОГИКА ПРОВЕРКИ ССЫЛОК ---
+// --- НОВАЯ ФУНКЦИЯ: Проверка статуса одной ссылки ---
 async function checkLinkStatus(url, redirects = 0) {
   return new Promise((resolve) => {
-    // Кодируем URL, чтобы избежать ошибок с неэкранированными символами
     let parsedUrl;
     try {
-        parsedUrl = new URL(encodeURI(url)); // Используем encodeURI
+        parsedUrl = new URL(encodeURI(url)); // Важно: кодируем URI
+        // Проверяем, что это HTTP(S) ссылка, иначе сразу помечаем как неизвестный тип
+        if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+          return resolve('unknown');
+        }
     } catch (e) {
-        return resolve('broken'); // Неверный URL после кодирования
+        return resolve('broken'); // Если URL невалиден
     }
 
     const protocolModule = parsedUrl.protocol === 'https:' ? https : http;
+    
     const options = {
       method: 'HEAD',
       hostname: parsedUrl.hostname,
-      path: parsedUrl.pathname + parsedUrl.search,
-      timeout: 10000,
+      port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80), // Указываем порт явно
+      path: parsedUrl.pathname + parsedUrl.search + parsedUrl.hash, // Включаем хэш для полноты
+      timeout: 10000, // Таймаут 10 секунд
+      // Добавляем user-agent, чтобы не блокироваться некоторыми серверами
+      headers: {
+        'User-Agent': 'LinkDock-LinkChecker/1.0'
+      }
     };
 
     const req = protocolModule.request(options, (res) => {
-      // Handle redirects
+      // Обработка редиректов
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        if (redirects < 5) { // Max 5 redirects
-          // Рекурсивно проверяем новую локацию
-          checkLinkStatus(res.headers.location, redirects + 1).then(resolve);
+        if (redirects < 5) {
+          // Важно: новый URL может быть относительным, делаем его абсолютным
+          const newUrl = new URL(res.headers.location, url).toString();
+          checkLinkStatus(newUrl, redirects + 1).then(resolve);
           res.resume();
           return;
         } else {
           res.resume();
-          return resolve('broken'); // Too many redirects
+          return resolve('broken'); // Слишком много редиректов
         }
       }
 
       if (res.statusCode >= 200 && res.statusCode < 400) {
         resolve('ok');
-      } else if (res.statusCode >= 400 && res.statusCode < 500) {
+      }
+      else if (res.statusCode >= 400 && res.statusCode < 500) {
         resolve('broken');
-      } else {
-        resolve('unknown');
+      }
+      else {
+        resolve('unknown'); // Все остальные статусы
       }
       res.resume();
     });
 
     req.on('error', (err) => {
+      // console.error(`Error checking ${url}:`, err.message); // Для отладки
       if (err.code === 'ENOTFOUND' || err.code === 'ECONNREFUSED' || err.code === 'ERR_INVALID_URL') {
         resolve('broken');
-      } else if (err.code === 'ETIMEDOUT') {
+      } else if (err.code === 'ETIMEDOUT' || err.code === 'ESOCKETTIMEDOUT') { // ETIMEDOUT для connect, ESOCKETTIMEDOUT для read
         resolve('timeout');
       } else {
         resolve('error');
@@ -185,43 +205,86 @@ async function checkLinkStatus(url, redirects = 0) {
   });
 }
 
-// IPC-обработчик для запуска проверки всех ссылок
+// --- НОВЫЙ IPC-обработчик: Запуск проверки всех ссылок ---
 ipcMain.handle('links:checkAll', async (event) => {
-  const bookmarks = store.get('bookmarks');
-  const results = [];
-  const chunkSize = 10;
-  
-  for (let i = 0; i < bookmarks.length; i += chunkSize) {
-    const chunk = bookmarks.slice(i, i + chunkSize);
-    const chunkPromises = chunk.map(async (bookmark) => {
-      // Проверяем только если статус "unchecked" или проверялся более недели назад
-      const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      const lastCheck = bookmark.lastCheckDate ? new Date(bookmark.lastCheckDate) : null;
+  const allBookmarks = store.get('bookmarks');
+  const bookmarksToUpdate = []; // Будем собирать те закладки, которые требуют обновления
+  const total = allBookmarks.length;
 
-      if (bookmark.lastCheckStatus === 'unchecked' || !lastCheck || lastCheck < oneWeekAgo) {
-        const status = await checkLinkStatus(bookmark.url);
-        bookmark.lastCheckStatus = status;
-        bookmark.lastCheckDate = new Date().toISOString();
-      }
-      results.push({ id: bookmark.id, status: bookmark.lastCheckStatus, url: bookmark.url });
-      return bookmark;
-    });
+  // Отправляем начальный прогресс
+  if (mainWindow) {
+    mainWindow.webContents.send('links:checkProgress', { processed: 0, total, status: 'started' });
+  }
+
+  const checkInterval = 200; // Интервал между запросами к разным доменам (в мс)
+  const concurrentChecks = 5; // Количество одновременных проверок
+
+  // Создаем очередь промисов, которые будут запускаться с задержкой
+  let activePromises = [];
+  let processedCount = 0;
+
+  for (let i = 0; i < total; i++) {
+    const bookmark = allBookmarks[i];
     
-    await Promise.all(chunkPromises);
-    if (mainWindow) {
-        mainWindow.webContents.send('links:checkProgress', { 
-            processed: Math.min(i + chunkSize, bookmarks.length), 
-            total: bookmarks.length 
-        });
+    // Проверяем, нужна ли проверка (не проверялась или проверялась давно)
+    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const lastCheck = bookmark.lastCheckDate ? new Date(bookmark.lastCheckDate) : null;
+    const shouldCheck = (bookmark.lastCheckStatus === undefined || bookmark.lastCheckStatus === 'unchecked' || !lastCheck || lastCheck < oneWeekAgo);
+
+    if (shouldCheck) {
+      // Добавляем промис в очередь, но запускаем с задержкой, чтобы не перегружать
+      const checkPromise = new Promise(resolve => {
+        setTimeout(async () => {
+          const status = await checkLinkStatus(bookmark.url);
+          bookmark.lastCheckStatus = status;
+          bookmark.lastCheckDate = new Date().toISOString();
+          bookmarksToUpdate.push(bookmark); // Добавляем в список для обновления
+          processedCount++;
+          if (mainWindow) {
+            mainWindow.webContents.send('links:checkProgress', { processed: processedCount, total, status: 'inProgress', currentBookmarkId: bookmark.id, currentStatus: status });
+          }
+          resolve();
+        }, i * checkInterval); // Задержка для каждого запроса
+      });
+      activePromises.push(checkPromise);
+
+      // Если достигнуто максимальное количество одновременных проверок, ждем их завершения
+      if (activePromises.length >= concurrentChecks) {
+        await Promise.all(activePromises);
+        activePromises = []; // Очищаем список активных промисов
+      }
+    } else {
+      processedCount++; // Если не проверяли, все равно учитываем как "обработанную"
+      if (mainWindow) {
+        mainWindow.webContents.send('links:checkProgress', { processed: processedCount, total, status: 'inProgress', currentBookmarkId: bookmark.id, currentStatus: bookmark.lastCheckStatus });
+      }
     }
   }
 
-  store.set('bookmarks', bookmarks);
-  return { ok: true, results };
+  // Ждем завершения всех оставшихся активных промисов
+  await Promise.all(activePromises);
+
+  // Обновляем только те закладки, которые были изменены
+  if (bookmarksToUpdate.length > 0) {
+    const updatedBookmarkIds = new Set(bookmarksToUpdate.map(b => b.id));
+    const newBookmarks = allBookmarks.map(b => {
+      if (updatedBookmarkIds.has(b.id)) {
+        return bookmarksToUpdate.find(ub => ub.id === b.id);
+      }
+      return b;
+    });
+    store.set('bookmarks', newBookmarks);
+  }
+
+  // Отправляем сигнал о завершении
+  if (mainWindow) {
+    mainWindow.webContents.send('links:checkProgress', { processed: total, total, status: 'completed' });
+  }
+
+  return { ok: true, updatedCount: bookmarksToUpdate.length };
 });
 
 
-// --- ELECTRON ЖИЗНЕННЫЙ ЦИКЛ ---
 app.whenReady().then(() => {
   createTray();
   setTheme(store.get('ui.theme'));
@@ -236,7 +299,6 @@ app.on('before-quit', () => { app.isQuitting = true; });
 app.on('will-quit', () => { backupData(); globalShortcut.unregisterAll(); });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
-// --- УТИЛИТЫ ---
 function urlHash(url){ return Buffer.from(url).toString('base64').slice(0, 24); }
 
 function createLinkWindow(url){
@@ -249,7 +311,6 @@ function createLinkWindow(url){
   return win;
 }
 
-// --- IPC ОБРАБОТЧИКИ ---
 ipcMain.handle('store:getAll', () => store.store);
 ipcMain.handle('store:save', (e, payload) => { store.set(payload.key, payload.value); return true; });
 ipcMain.handle('ui:getTheme', () => store.get('ui.theme'));
@@ -283,24 +344,10 @@ ipcMain.handle('file:importBookmarks', async (e, from) => {
       const list = [];
       function walk(node, groupPath=[]){
         if (!node) return;
-        // Игнорируем специфичные для браузера группы, которые не хотим переносить
-        if (['bookmark_bar','other','synced'].includes(node.name?.toLowerCase())) {
-            node.children?.forEach(ch => walk(ch, groupPath)); // Продолжаем обход без добавления этого узла в groupPath
-        } else if (node.type === 'url') {
-            list.push({ title: node.name, url: node.url, groupPath: groupPath.join(' / ') || 'Импорт' });
-        } else if (node.children){ 
-            const gp = node.name ? [...groupPath, node.name] : groupPath; 
-            node.children.forEach(ch => walk(ch, gp)); 
-        }
+        if (node.type === 'url') list.push({ title: node.name, url: node.url, groupPath: groupPath.join(' / ') || 'Импорт' });
+        else if (node.children){ const gp = node.name ? [...groupPath, node.name] : groupPath; node.children.forEach(ch => walk(ch, gp)); }
       }
-      // Начинаем обход с корневых папок, но только тех, которые содержат закладки
-      ['bookmark_bar','other','synced'].forEach(k => {
-          const rootNode = raw?.roots?.[k];
-          if (rootNode) {
-              // Специально не передаем имя rootNode как groupPath для этих верхних уровней
-              rootNode.children?.forEach(child => walk(child, ['Импорт'])); // Все импортированные будут в "Импорт" по умолчанию
-          }
-      });
+      ['bookmark_bar','other','synced'].forEach(k => walk(raw?.roots?.[k]));
       applyImportedList(list);
       return { ok: true, added: list.length };
     }
@@ -313,7 +360,7 @@ ipcMain.handle('file:importBookmarks', async (e, from) => {
       if (!prof) throw new Error('Не удалось определить профиль Firefox');
       const dbPath = path.join(ff, prof, 'places.sqlite');
       if (!fs.existsSync(dbPath)) throw new Error('places.sqlite не найден');
-      const Database = require('better-sqlite3');
+      // const Database = require('better-sqlite3'); // Уже объявлен в начале файла
       const db = new Database(dbPath, { readonly: true });
       const rows = db.prepare(`SELECT b.title as title, p.url as url, f.title as folder FROM moz_bookmarks b JOIN moz_places p ON p.id = b.fk LEFT JOIN moz_bookmarks f ON f.id = b.parent WHERE b.type = 1 AND p.url LIKE 'http%'`).all();
       db.close();
@@ -343,7 +390,16 @@ function applyImportedList(list){
   list.forEach(b => {
     if (b.url && !existingUrls.has(b.url)) {
       const gid = ensureGroup(b.groupPath);
-      bookmarks.push({ id: `b_${Date.now()}_${Math.random().toString(16).slice(2)}`, title: b.title, url: b.url, groupId: gid, tags: [], pinned: false });
+      bookmarks.push({
+        id: `b_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+        title: b.title,
+        url: b.url,
+        groupId: gid,
+        tags: [],
+        pinned: false,
+        lastCheckStatus: 'unchecked', // ДОБАВЛЕНО: Начальный статус для новых закладок
+        lastCheckDate: null            // ДОБАВЛЕНО: Дата последней проверки
+      });
       existingUrls.add(b.url);
     }
   });
