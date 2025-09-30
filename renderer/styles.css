@@ -1,5 +1,5 @@
 /* ===================================== */
-/* Базовые стили и сброс CSS             */
+/* ОСНОВНЫЕ ПЕРЕМЕННЫЕ И СБРОС СТИЛЕЙ    */
 /* ===================================== */
 :root {
     --bg-color-light: #f4f7f6;
@@ -7,16 +7,16 @@
     --border-color-light: #ddd;
     --primary-color-light: #007bff;
     --secondary-bg-light: #ffffff;
-    --accent-color-light: #e9ecef; /* Для ховера, активных элементов */
+    --accent-color-light: #e9ecef;
     --input-bg-light: #ffffff;
     --shadow-light: 0 2px 5px rgba(0,0,0,0.1);
 
     --bg-color-dark: #202b33;
     --text-color-dark: #e0e0e0;
     --border-color-dark: #3a4750;
-    --primary-color-dark: #007bff; /* Можно изменить на более темный синий, если нужно */
+    --primary-color-dark: #007bff;
     --secondary-bg-dark: #283742;
-    --accent-color-dark: #34495e; /* Для ховера, активных элементов */
+    --accent-color-dark: #34495e;
     --input-bg-dark: #3a4750;
     --shadow-dark: 0 4px 10px rgba(0,0,0,0.3);
 }
@@ -56,19 +56,17 @@ body {
     color: var(--text-color);
     background-color: var(--bg-color);
     height: 100vh;
-    overflow: hidden; /* Prevent scroll on body */
-    display: flex; /* Use flex to ensure app-container fills height */
-    flex-direction: column;
+    overflow: hidden;
+    display: flex;
 }
 
 /* ===================================== */
-/* Основной макет приложения             */
+/* ОСНОВНОЙ МАКЕТ                        */
 /* ===================================== */
-.app-container {
+.container {
     display: flex;
-    flex-grow: 1; /* Allow container to grow and fill body height */
-    background-color: var(--bg-color);
-    color: var(--text-color);
+    width: 100%;
+    height: 100%;
 }
 
 .sidebar {
@@ -78,8 +76,7 @@ body {
     padding: 15px;
     display: flex;
     flex-direction: column;
-    flex-shrink: 0; /* Prevent sidebar from shrinking */
-    overflow-y: auto; /* Enable scrolling for sidebar content */
+    flex-shrink: 0;
 }
 
 .main-content {
@@ -87,21 +84,32 @@ body {
     display: flex;
     flex-direction: column;
     padding: 15px;
-    overflow-y: hidden; /* Main content manages its own scroll for the list */
+    overflow: hidden;
 }
 
-.header {
-    font-size: 20px;
-    font-weight: bold;
+.logo-area {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     margin-bottom: 20px;
+    padding-left: 5px;
+}
+
+.app-logo {
+    width: 32px;
+    height: 32px;
+}
+
+.logo-area h1 {
+    font-size: 20px;
+    font-weight: 600;
     color: var(--primary-color);
-    text-align: center;
 }
 
 /* ===================================== */
-/* Элементы управления (кнопки, инпуты)   */
+/* ЭЛЕМЕНТЫ УПРАВЛЕНИЯ                   */
 /* ===================================== */
-.btn {
+.btn, button {
     background-color: var(--primary-color);
     color: white;
     border: none;
@@ -110,109 +118,52 @@ body {
     cursor: pointer;
     font-size: 14px;
     transition: background-color 0.2s ease;
-    white-space: nowrap; /* Prevent text wrapping */
 }
 
-.btn:hover {
-    background-color: #0056b3; /* Darker shade of primary */
+button:hover {
+    opacity: 0.9;
 }
 
-.btn.gray {
-    background-color: #6c757d;
-}
-
-.btn.gray:hover {
-    background-color: #5a6268;
-}
-
-.btn.small {
-    padding: 5px 8px;
-    font-size: 12px;
-}
-
-input[type="text"], textarea {
+input[type="text"], input[type="url"], textarea, select {
     border: 1px solid var(--border-color);
     background-color: var(--input-bg);
     color: var(--text-color);
     padding: 8px;
     border-radius: 4px;
-    margin-bottom: 8px;
     width: 100%;
     font-size: 14px;
-    transition: border-color 0.2s ease;
 }
 
-input[type="text"]:focus, textarea:focus {
+input:focus, textarea:focus, select:focus {
     outline: none;
     border-color: var(--primary-color);
 }
 
 /* ===================================== */
-/* Верхняя панель и добавление закладок  */
+/* БОКОВАЯ ПАНЕЛЬ (SIDEBAR)              */
 /* ===================================== */
-.top-bar {
-    display: flex;
-    flex-wrap: wrap; /* Allow items to wrap on smaller screens */
-    gap: 10px;
+.search-bar {
     margin-bottom: 15px;
-    align-items: flex-start; /* Align items to the top if they wrap */
 }
 
-.search-input {
+.group-list-container {
     flex-grow: 1;
-    min-width: 150px; /* Ensure search input has a minimum width */
-}
-
-.add-section {
-    display: flex;
-    flex-wrap: wrap; /* Allow inputs to wrap */
-    gap: 8px;
-    flex-grow: 2; /* Allow add section to take more space */
-    min-width: 300px; /* Minimum width for add section */
-}
-
-.add-section input {
-    flex-grow: 1;
-    min-width: 100px;
-    margin-bottom: 0; /* Remove bottom margin from inputs in flex context */
-}
-
-.add-section .btn {
-    flex-shrink: 0; /* Prevent add button from shrinking */
-    height: 34px; /* Match height of input fields */
-    margin-top: 1px; /* Small adjustment for visual alignment */
-}
-
-
-/* ===================================== */
-/* Список групп                           */
-/* ===================================== */
-.group-list-header {
-    font-weight: bold;
-    margin-top: 20px;
-    margin-bottom: 10px;
-    padding-bottom: 5px;
-    border-bottom: 1px solid var(--border-color);
-    color: var(--primary-color);
+    overflow-y: auto;
+    margin-bottom: 15px;
 }
 
 .group-list {
     list-style: none;
-    flex-grow: 1;
-    overflow-y: auto; /* Enable scrolling for group list */
-    padding-right: 5px; /* Add some padding for scrollbar */
 }
 
 .group-list li {
     padding: 8px 10px;
     margin-bottom: 5px;
-    background-color: var(--bg-color);
     border-radius: 4px;
     cursor: pointer;
-    transition: background-color 0.2s ease;
     display: flex;
-    align-items: center;
     justify-content: space-between;
+    align-items: center;
 }
 
 .group-list li:hover {
@@ -222,53 +173,73 @@ input[type="text"]:focus, textarea:focus {
 .group-list li.active {
     background-color: var(--primary-color);
     color: white;
-}
-
-.group-list li.active:hover {
-    background-color: #0056b3;
+    font-weight: bold;
 }
 
 .delete-group-btn {
     color: #dc3545;
     font-weight: bold;
-    margin-left: 10px;
     cursor: pointer;
-    transition: color 0.2s ease;
+    padding: 0 5px;
+    display: none; /* Скрыт по умолчанию */
 }
 
-.group-list li.active .delete-group-btn {
-    color: white;
+.group-list li:hover .delete-group-btn {
+    display: inline; /* Появляется при наведении */
 }
 
-.group-list li.active .delete-group-btn:hover {
-    color: #f8d7da; /* Light red on dark primary */
-}
-
-.group-list li.dragging {
-    opacity: 0.5;
-    border: 1px dashed var(--primary-color);
-}
-
-.group-list li.dragover {
-    border: 1px dashed var(--primary-color);
-    background-color: var(--accent-color);
-}
-
-.group-actions {
-    margin-top: 15px;
-    padding-top: 10px;
+.add-group-section {
+    margin-top: auto;
+    padding-top: 15px;
     border-top: 1px solid var(--border-color);
 }
 
+.add-group-section input {
+    margin-bottom: 8px;
+}
+
+.import-export-section {
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color);
+}
+
+.import-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.export-btn {
+    width: 100%;
+}
+
+.theme-switch {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color);
+}
+
+.theme-switch button {
+    width: 100%;
+}
 
 /* ===================================== */
-/* Список закладок и элементы закладок    */
+/* ОСНОВНОЙ КОНТЕНТ                      */
 /* ===================================== */
+.add-bookmark-form {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr auto;
+    gap: 10px;
+    margin-bottom: 15px;
+    align-items: center;
+}
+
 .bookmark-list {
     list-style: none;
     flex-grow: 1;
-    overflow-y: auto; /* Enable scrolling for bookmark list */
-    padding-right: 5px; /* Add some padding for scrollbar */
+    overflow-y: auto;
+    padding-right: 5px;
 }
 
 .bookmark-item {
@@ -278,136 +249,114 @@ input[type="text"]:focus, textarea:focus {
     margin-bottom: 10px;
     padding: 10px;
     box-shadow: var(--shadow);
-    transition: all 0.2s ease;
-    position: relative;
 }
 
-.bookmark-item:hover {
-    border-color: var(--primary-color);
+.bookmark-display {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
-.bookmark-item.pinned {
-    border-left: 5px solid var(--primary-color);
-    padding-left: 5px; /* Adjust padding due to border */
-}
-
-.bookmark-item .favicon {
+.favicon {
     width: 16px;
     height: 16px;
-    vertical-align: middle;
-    margin-right: 8px;
     flex-shrink: 0;
 }
 
-.bookmark-item .title {
+.bookmark-info {
+    flex-grow: 1;
+    min-width: 0; /* Важно для работы text-overflow */
+}
+
+.bookmark-info .title {
     font-weight: bold;
-    color: var(--primary-color);
-    margin-right: 10px;
 }
 
-.bookmark-item .url {
-    color: var(--text-color);
+.bookmark-info .url {
+    color: var(--muted);
     font-size: 12px;
-    word-break: break-all; /* Allow long URLs to break */
-    opacity: 0.7;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
 }
 
-.bookmark-item .taglist {
+.taglist {
     margin-top: 5px;
 }
 
-.bookmark-item .tag {
+.tag {
     display: inline-block;
     background-color: var(--accent-color);
-    color: var(--text-color);
+    color: var(--muted);
     padding: 2px 6px;
-    border-radius: 3px;
+    border-radius: 10px;
     font-size: 11px;
     margin-right: 5px;
-    margin-bottom: 3px;
-    cursor: pointer;
 }
 
-.bookmark-item .notes-display {
+.notes-display {
     font-style: italic;
-    color: var(--text-color);
+    color: var(--muted);
     font-size: 12px;
-    margin-top: 5px;
-    max-height: 60px; /* Limit height */
-    overflow-y: auto; /* Scroll if too long */
+    margin-top: 8px;
+    padding-top: 8px;
     border-top: 1px dashed var(--border-color);
-    padding-top: 5px;
-    margin-top: 5px;
 }
 
-
-/* ===================================== */
-/* Кнопки действий (пин, открыть, удалить) */
-/* ===================================== */
-.actions {
+.bookmark-actions {
     display: flex;
-    align-items: center;
+    gap: 5px;
     margin-left: auto;
 }
 
-.icon-btn {
+.action-btn {
     background: none;
     border: none;
     cursor: pointer;
     font-size: 16px;
-    margin-left: 5px;
-    padding: 3px;
+    padding: 5px;
     border-radius: 4px;
-    transition: background-color 0.2s ease;
-    color: var(--text-color); /* Default icon color */
+    color: var(--muted);
 }
 
-.icon-btn:hover {
+.action-btn:hover {
     background-color: var(--accent-color);
+    color: var(--text-color);
 }
 
-.icon-btn.pin.pinned {
-    color: var(--primary-color); /* Highlight pinned icon */
+.pin.pinned {
+    color: orange;
 }
 
-.del { color: #dc3545; } /* Red for delete */
-.del:hover { background-color: rgba(220, 53, 69, 0.2); }
-
 /* ===================================== */
-/* Режим редактирования закладок          */
+/* РЕЖИМ РЕДАКТИРОВАНИЯ                  */
 /* ===================================== */
-.bookmark-item .edit-mode {
+.bookmark-edit-form {
     display: none;
     flex-direction: column;
-    gap: 5px;
+    gap: 8px;
     margin-top: 10px;
     padding-top: 10px;
     border-top: 1px solid var(--border-color);
 }
 
-.bookmark-item.editing .display-mode {
+.bookmark-item.editing .bookmark-display {
     display: none;
 }
 
-.bookmark-item.editing .edit-mode {
+.bookmark-item.editing .bookmark-edit-form {
     display: flex;
-}
-
-.edit-mode input[type="text"],
-.edit-mode textarea {
-    width: 100%;
-    margin-bottom: 0;
 }
 
 .edit-actions {
     display: flex;
-    gap: 8px;
-    margin-top: 10px;
     justify-content: flex-end;
+    gap: 10px;
 }
 
 /* ===================================== */
-/* Модальное окно перемещения            */
+/* МОДАЛЬНОЕ ОКНО                        */
 /* ===================================== */
 .modal-overlay {
     position: fixed;
@@ -415,211 +364,80 @@ input[type="text"]:focus, textarea:focus {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
+    background-color: rgba(0,0,0,0.6);
+    display: none; /* Скрыто по умолчанию */
     justify-content: center;
     align-items: center;
-    z-index: 1000;
-    display: none; /* Скрыто по умолчанию */
+    z-index: 100;
 }
 
 .modal-content {
-    background-color: var(--secondary-bg);
-    padding: 30px;
+    background: var(--secondary-bg);
+    padding: 20px;
     border-radius: 8px;
-    box-shadow: var(--shadow);
     width: 400px;
     max-width: 90%;
-    color: var(--text-color);
 }
 
 .modal-content h2 {
     margin-top: 0;
-    margin-bottom: 20px;
-    color: var(--primary-color);
-    text-align: center;
+    margin-bottom: 15px;
 }
 
-.modal-body {
-    margin-bottom: 20px;
-}
-
-.modal-body label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-}
-
-.modal-body select,
-.modal-body input[type="text"] {
+.modal-content select {
     width: 100%;
-    padding: 8px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    background-color: var(--input-bg);
-    color: var(--text-color);
-    margin-bottom: 10px;
 }
 
-.modal-footer {
+.modal-buttons {
+    margin-top: 20px;
     display: flex;
     justify-content: flex-end;
     gap: 10px;
 }
 
-.or-separator {
-    text-align: center;
-    margin: 15px 0;
-    font-weight: bold;
-    color: #999;
-    position: relative;
-}
-
-.or-separator::before,
-.or-separator::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    width: 40%;
-    height: 1px;
-    background-color: var(--border-color);
-}
-
-.or-separator::before { left: 0; }
-.or-separator::after { right: 0; }
-
 /* ===================================== */
-/* Уведомления (нотификации)             */
+/* УВЕДОМЛЕНИЯ                           */
 /* ===================================== */
-#notifications {
+.notifications-container {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    z-index: 10000;
+    z-index: 200;
     display: flex;
     flex-direction: column;
     gap: 10px;
 }
 
 .toast {
-    background-color: var(--secondary-bg);
-    color: var(--text-color);
-    padding: 10px 15px;
-    border-radius: 5px;
+    padding: 12px 18px;
+    border-radius: 6px;
     box-shadow: var(--shadow);
     opacity: 0;
-    animation: fadeInOut 4s forwards;
-    min-width: 250px;
-    text-align: center;
-    border: 1px solid var(--border-color);
+    animation: toast-fade-in 0.3s forwards;
 }
 
-.toast.success { background-color: #d4edda; color: #155724; border-color: #c3e6cb; }
-.toast.info { background-color: #d1ecf1; color: #0c5460; border-color: #bee5eb; }
-.toast.error { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
+.toast.info { background: #cce5ff; color: #004085; }
+.toast.success { background: #d4edda; color: #155724; }
+.toast.error { background: #f8d7da; color: #721c24; }
 
-[data-theme='dark'] .toast.success { background-color: #1e3a2c; color: #3ad363; border-color: #285437; }
-[data-theme='dark'] .toast.info { background-color: #17383f; color: #3be2f8; border-color: #214f59; }
-[data-theme='dark'] .toast.error { background-color: #4b1a1f; color: #ff8b9b; border-color: #6a242a; }
-
-
-@keyframes fadeInOut {
-    0% { opacity: 0; transform: translateY(20px); }
-    10% { opacity: 1; transform: translateY(0); }
-    90% { opacity: 1; transform: translateY(0); }
-    100% { opacity: 0; transform: translateY(20px); }
+@keyframes toast-fade-in {
+    to { opacity: 1; transform: translateX(0); }
 }
+
+[data-theme='dark'] .toast.info { background: #1c3a5e; color: #6cb2f7; }
+[data-theme='dark'] .toast.success { background: #1e4b3e; color: #72d699; }
+[data-theme='dark'] .toast.error { background: #572a32; color: #f18e99; }
 
 /* ===================================== */
-/* Стили для статуса ссылки (добавленные)*/
+/* СТАТУС ССЫЛКИ                         */
 /* ===================================== */
 .link-status-icon {
-    width: 16px;
-    height: 16px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
-    margin-left: 8px;
-    display: inline-block;
-    vertical-align: middle;
-    flex-shrink: 0; /* Чтобы иконка не сжималась */
-}
-
-/* Статус: OK */
-.link-status-icon.status-ok {
-    background-color: #28a745; /* Зеленый */
-    border: 1px solid #1e7e34;
-}
-.link-status-icon.status-ok::after {
-    content: '✓'; /* Галочка */
-    color: white;
-    font-size: 10px;
-    line-height: 16px;
-    text-align: center;
-    display: block;
-}
-
-/* Статус: Broken/Error/Timeout/Unknown/Unchecked */
-.link-status-icon.status-broken,
-.link-status-icon.status-error,
-.link-status-icon.status-timeout {
-    background-color: #dc3545; /* Красный */
-    border: 1px solid #bd2130;
-}
-.link-status-icon.status-broken::after,
-.link-status-icon.status-error::after,
-.link-status-icon.status-timeout::after {
-    content: '✕'; /* Крестик */
-    color: white;
-    font-size: 10px;
-    line-height: 16px;
-    text-align: center;
-    display: block;
-}
-
-.link-status-icon.status-unchecked,
-.link-status-icon.status-unknown {
-    background-color: #6c757d; /* Серый */
-    border: 1px solid #545b62;
-}
-.link-status-icon.status-unchecked::after,
-.link-status-icon.status-unknown::after {
-    content: '?'; /* Вопрос */
-    color: white;
-    font-size: 10px;
-    line-height: 16px;
-    text-align: center;
-    display: block;
-}
-
-/* Выравнивание иконок внутри bookmark-item */
-.bookmark-item .display-mode {
-    display: flex;
-    align-items: center; /* Выравнивание по центру */
-    gap: 8px; /* Небольшой отступ между элементами */
-    flex-wrap: wrap; /* Если места мало, переносить элементы */
-}
-
-.bookmark-item .title {
-    flex-grow: 1; /* Чтобы название занимало доступное место */
-    min-width: 150px; /* Минимальная ширина для названия */
-}
-
-.bookmark-item .url {
-    flex-grow: 1;
-    min-width: 150px;
-    max-width: 300px; /* Ограничим ширину URL, чтобы не растягивался сильно */
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.bookmark-item .taglist {
-    flex-shrink: 0; /* Не сжимать список тегов */
-}
-
-.bookmark-item .actions {
-    margin-left: auto; /* Прижимаем кнопки к правому краю */
     flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 4px;
+    border: 1px solid rgba(0,0,0,0.1);
 }
+.status-ok { background-color: #28a745; }
+.status-broken, .status-error, .status-timeout { background-color: #dc3545; }
+.status-unchecked, .status-unknown { background-color: #6c757d; }
