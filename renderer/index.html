@@ -1,95 +1,104 @@
-<!doctype html>
-<html lang="ru">
+<!DOCTYPE html>
+<html>
 <head>
-  <meta charset="utf-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.google.com https://*.gstatic.com; script-src 'self';" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://www.google.com; connect-src 'self' https://www.google.com;">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LinkDock</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="layout">
-    <aside class="sidebar">
-      <div class="side-header">
-        <h1>LinkDock</h1>
-        <div class="side-actions">
-          <button id="btnTheme" class="btn" title="Переключить тему">Тема</button>
-          <button id="btnExport" class="btn">Экспорт</button>
-        </div>
-      </div>
-      <div class="import-group">
-        <button id="impChrome" class="btn">Импорт Chrome</button>
-        <button id="impEdge" class="btn">Импорт Edge</button>
-        <button id="impFirefox" class="btn">Импорт Firefox</button>
-        <button id="impJSON" class="btn">Импорт JSON</button>
-      </div>
-      <ul id="groupList" class="groups" draggable="false"></ul>
-      <div class="add-group">
-        <input id="newGroupName" placeholder="Новая группа" />
-        <button id="addGroupBtn" class="btn">+</button>
-      </div>
-    </aside>
+  <div id="notifications"></div>
 
-    <main class="content">
-      <div class="toolbar">
-        <input id="search" placeholder="Поиск (Ctrl+K)" />
-        <input id="title" placeholder="Название" />
-        <input id="url" placeholder="https://..." />
-        <input id="tags" placeholder="#теги через запятую" />
-        <button id="addBtn" class="btn">Добавить</button>
+  <div class="app-container">
+    <div class="sidebar">
+      <div class="header">LinkDock</div>
+      <div class="menu-item import-export">
+        <button id="impChrome" class="btn small">Импорт Chrome</button>
+        <button id="impEdge" class="btn small">Импорт Edge</button>
+        <button id="impFirefox" class="btn small">Импорт Firefox</button>
+        <button id="impJSON" class="btn small">Импорт JSON</button>
       </div>
-      <ul id="list" class="list" draggable="false"></ul>
-    </main>
+      <div class="menu-item import-export">
+        <button id="btnExport" class="btn small export-btn">Экспорт</button>
+      </div>
+
+      <div class="group-list-header">Общее</div>
+      <ul id="groupList" class="group-list">
+        </ul>
+
+      <div class="group-actions">
+        <input type="text" id="newGroupName" placeholder="Название новой группы">
+        <button id="addGroupBtn" class="btn">Добавить группу</button>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="top-bar">
+        <input type="text" id="search" placeholder="Поиск (Ctrl+K)" class="search-input">
+        <div class="add-section">
+          <input type="text" id="title" placeholder="Название">
+          <input type="text" id="url" placeholder="URL">
+          <input type="text" id="tags" placeholder="Теги (через запятую)">
+          <button id="addBtn" class="btn">Добавить</button>
+        </div>
+        <button id="btnTheme" class="btn icon-btn"><span class="icon">💡</span></button>
+      </div>
+
+      <ul id="list" class="bookmark-list">
+        </ul>
+    </div>
+  </div>
+
+  <div id="moveModal" class="modal-overlay">
+    <div class="modal-content">
+      <h2>Переместить закладку</h2>
+      <div class="modal-body">
+        <label for="moveGroupSelect">Выбрать существующую группу:</label>
+        <select id="moveGroupSelect"></select>
+        <div class="or-separator">ИЛИ</div>
+        <label for="moveNewGroupInput">Создать новую группу:</label>
+        <input type="text" id="moveNewGroupInput" placeholder="Название новой группы">
+      </div>
+      <div class="modal-footer">
+        <button id="moveCancelBtn" class="btn gray">Отмена</button>
+        <button id="moveConfirmBtn" class="btn">Переместить</button>
+      </div>
+    </div>
   </div>
 
   <template id="tplItem">
-    <li class="item" draggable="true">
-      <img src="" alt="" class="favicon" />
-      <span class="pin" title="Закрепить">★</span>
-      <div class="item-content">
-        <div class="display-view">
-          <span class="title"></span>
-          <span class="url"></span>
-          <div class="taglist"></div>
-          <div class="notes-display"></div>
+    <li class="bookmark-item">
+      <div class="display-mode">
+        <img class="favicon" src="" alt="F">
+        <span class="title"></span>
+        <span class="url"></span>
+        <span class="taglist"></span>
+        <span class="notes-display"></span>
+        <div class="actions">
+          <span class="pin icon-btn" title="Закрепить/открепить">📌</span>
+          <span class="open icon-btn" title="Открыть">↗️</span>
+          <span class="move icon-btn" title="Переместить">📁</span>
+          <span class="edit icon-btn" title="Редактировать">✍️</span>
+          <span class="del icon-btn" title="Удалить">🗑️</span>
         </div>
-        <div class="edit-view">
-          <input class="edit-title" placeholder="Название" />
-          <input class="edit-url" placeholder="URL" />
-          <input class="edit-tags" placeholder="Теги через запятую" />
-          <textarea class="edit-notes" placeholder="Заметка..." rows="3"></textarea>
-        </div>
+        <span class="link-status-icon" title="Статус ссылки"></span>
       </div>
-      <div class="item-actions">
-        <div class="display-actions">
-          <button class="btn open">Открыть</button>
-          <button class="btn move">Перенести</button>
-          <button class="btn edit">Изм.</button>
-          <button class="btn del">Удалить</button>
-        </div>
+      
+      <div class="edit-mode">
+        <input type="text" class="edit-title" placeholder="Название">
+        <input type="text" class="edit-url" placeholder="URL">
+        <input type="text" class="edit-tags" placeholder="Теги (через запятую)">
+        <textarea class="edit-notes" placeholder="Заметки"></textarea>
         <div class="edit-actions">
-          <button class="btn save">Сохранить</button>
-          <button class="btn cancel">Отмена</button>
+          <button class="save btn">Сохранить</button>
+          <button class="cancel btn gray">Отмена</button>
         </div>
       </div>
     </li>
   </template>
 
-  <div id="moveModal" class="modal-overlay" style="display: none;">
-    <div class="modal-content">
-      <h3>Переместить закладку</h3>
-      <p>Выберите существующую группу или введите имя новой.</p>
-      <select id="moveGroupSelect"></select>
-      <input id="moveNewGroupInput" placeholder="Или имя новой группы..." />
-      <div class="modal-actions">
-        <button id="moveConfirmBtn" class="btn">Переместить</button>
-        <button id="moveCancelBtn" class="btn">Отмена</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="notifications"></div>
-
+  <script src="preload.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>
