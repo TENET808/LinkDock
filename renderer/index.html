@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LinkDock</title>
     <link rel="stylesheet" href="./styles.css">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://www.google.com; connect-src 'self' http://* https://*;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://www.google.com; connect-src 'self' http://* https://*;">
 </head>
 <body>
     <div id="notifications" class="notifications-container"></div>
@@ -13,7 +13,7 @@
     <div class="container">
         <div class="sidebar">
             <div class="logo-area">
-                <img src="./build/icon.png" alt="LinkDock Logo" class="app-logo">
+                <img src="../build/icon.png" alt="LinkDock Logo" class="app-logo">
                 <h1>LinkDock</h1>
             </div>
             
@@ -28,9 +28,10 @@
                 </div>
                 <button id="btnExport" class="export-btn" title="Экспорт всех данных в JSON-файл">Экспорт</button>
             </div>
+            
             <div class="group-list-container">
-                <div class="group-list-title">Общее</div> <ul id="groupList" class="group-list">
-                    </ul>
+                <ul id="groupList" class="group-list">
+                </ul>
             </div>
 
             <div class="add-group-and-theme-section">
@@ -42,7 +43,7 @@
                     <button id="btnTheme" class="primary-btn">Сменить тему</button>
                 </div>
             </div>
-            </div>
+        </div>
 
         <div class="main-content">
             <div class="add-bookmark-form">
@@ -53,7 +54,7 @@
             </div>
 
             <ul id="list" class="bookmark-list">
-                </ul>
+            </ul>
         </div>
     </div>
 
@@ -80,7 +81,8 @@
                     <p class="notes-display"></p>
                 </div>
                 <div class="bookmark-actions">
-                    <span class="link-status-icon" title="Статус ссылки"></span> <button class="action-btn pin" title="Закрепить/Открепить">&#9733;</button>
+                    <span class="link-status-icon" title="Статус ссылки"></span> 
+                    <button class="action-btn pin" title="Закрепить/Открепить">&#9733;</button>
                     <button class="action-btn open" title="Открыть ссылку">&#128279;</button>
                     <button class="action-btn edit" title="Редактировать">&#9998;</button>
                     <button class="action-btn move" title="Переместить">&#8644;</button>
