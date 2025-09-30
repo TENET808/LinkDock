@@ -17,34 +17,32 @@
                 <h1>LinkDock</h1>
             </div>
             
-            <div class="search-bar">
-                <input type="text" id="search" placeholder="Поиск закладок...">
-            </div>
-
-            <div class="group-list-container">
-                <ul id="groupList" class="group-list">
-                    </ul>
-            </div>
-
-            <div class="add-group-section">
-                <input type="text" id="newGroupName" placeholder="Имя новой группы">
-                <button id="addGroupBtn">Добавить группу</button>
-            </div>
-
             <div class="import-export-section">
-                <div class="import-buttons">
-                    <button id="impChrome" title="Импорт из Google Chrome">Импорт Chrome</button>
-                    <button id="impEdge" title="Импорт из Microsoft Edge">Импорт Edge</button>
-                    <button id="impFirefox" title="Импорт из Mozilla Firefox">Импорт Firefox</button>
-                    <button id="impJSON" title="Импорт из JSON-файла">Импорт JSON</button>
+                <div class="import-buttons-row">
+                    <button id="impChrome" class="import-btn" title="Импорт из Google Chrome">Импорт Chrome</button>
+                    <button id="impEdge" class="import-btn" title="Импорт из Microsoft Edge">Импорт Edge</button>
+                </div>
+                <div class="import-buttons-row">
+                    <button id="impFirefox" class="import-btn" title="Импорт из Mozilla Firefox">Импорт Firefox</button>
+                    <button id="impJSON" class="import-btn" title="Импорт из JSON-файла">Импорт JSON</button>
                 </div>
                 <button id="btnExport" class="export-btn" title="Экспорт всех данных в JSON-файл">Экспорт</button>
             </div>
-
-            <div class="theme-switch">
-                <button id="btnTheme">Сменить тему</button>
+            <div class="group-list-container">
+                <div class="group-list-title">Общее</div> <ul id="groupList" class="group-list">
+                    </ul>
             </div>
-        </div>
+
+            <div class="add-group-and-theme-section">
+                <div class="add-group-section">
+                    <input type="text" id="newGroupName" placeholder="Название новой группы">
+                    <button id="addGroupBtn" class="primary-btn">Добавить группу</button>
+                </div>
+                <div class="theme-switch-bottom">
+                    <button id="btnTheme" class="primary-btn">Сменить тему</button>
+                </div>
+            </div>
+            </div>
 
         <div class="main-content">
             <div class="add-bookmark-form">
