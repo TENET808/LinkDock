@@ -115,3 +115,97 @@ input, select, textarea { padding:8px; border:1px solid var(--border); border-ra
   color: var(--fg);
   background-color: rgba(127,127,127,.1);
 }
+
+/* ===================================== */
+/* НОВОЕ: Стили для статуса ссылки       */
+/* ===================================== */
+.link-status-icon {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    margin-left: 8px;
+    display: inline-block;
+    vertical-align: middle;
+    flex-shrink: 0; /* Чтобы иконка не сжималась */
+}
+
+/* Статус: OK */
+.link-status-icon.status-ok {
+    background-color: #28a745; /* Зеленый */
+    border: 1px solid #1e7e34;
+}
+.link-status-icon.status-ok::after {
+    content: '✓'; /* Галочка */
+    color: white;
+    font-size: 10px;
+    line-height: 16px;
+    text-align: center;
+    display: block;
+}
+
+/* Статус: Broken/Error/Timeout/Unknown/Unchecked */
+.link-status-icon.status-broken,
+.link-status-icon.status-error,
+.link-status-icon.status-timeout {
+    background-color: #dc3545; /* Красный */
+    border: 1px solid #bd2130;
+}
+.link-status-icon.status-broken::after,
+.link-status-icon.status-error::after,
+.link-status-icon.status-timeout::after {
+    content: '✕'; /* Крестик */
+    color: white;
+    font-size: 10px;
+    line-height: 16px;
+    text-align: center;
+    display: block;
+}
+
+.link-status-icon.status-unchecked,
+.link-status-icon.status-unknown {
+    background-color: #6c757d; /* Серый */
+    border: 1px solid #545b62;
+}
+.link-status-icon.status-unchecked::after,
+.link-status-icon.status-unknown::after {
+    content: '?'; /* Вопрос */
+    color: white;
+    font-size: 10px;
+    line-height: 16px;
+    text-align: center;
+    display: block;
+}
+
+/* Выравнивание иконок внутри bookmark-item */
+.bookmark-item .display-mode {
+    display: flex;
+    align-items: center; /* Выравнивание по центру */
+    gap: 8px; /* Небольшой отступ между элементами */
+    flex-wrap: wrap; /* Если места мало, переносить элементы */
+}
+
+.bookmark-item .title {
+    flex-grow: 1; /* Чтобы название занимало доступное место */
+    min-width: 150px; /* Минимальная ширина для названия */
+}
+
+.bookmark-item .url {
+    flex-grow: 1;
+    min-width: 150px;
+    max-width: 300px; /* Ограничим ширину URL, чтобы не растягивался сильно */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.bookmark-item .taglist {
+    flex-shrink: 0; /* Не сжимать список тегов */
+}
+
+.bookmark-item .actions {
+    margin-left: auto; /* Прижимаем кнопки к правому краю */
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
