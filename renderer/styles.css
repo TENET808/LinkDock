@@ -10,6 +10,7 @@
     --accent-color-light: #e9ecef;
     --input-bg-light: #ffffff;
     --shadow-light: 0 2px 5px rgba(0,0,0,0.1);
+    --muted-light: #6c757d; /* Добавлено */
 
     --bg-color-dark: #202b33;
     --text-color-dark: #e0e0e0;
@@ -19,6 +20,7 @@
     --accent-color-dark: #34495e;
     --input-bg-dark: #3a4750;
     --shadow-dark: 0 4px 10px rgba(0,0,0,0.3);
+    --muted-dark: #a0a0a0; /* Добавлено */
 }
 
 [data-theme='light'] {
@@ -30,6 +32,7 @@
     --accent-color: var(--accent-color-light);
     --input-bg: var(--input-bg-light);
     --shadow: var(--shadow-light);
+    --muted: var(--muted-light); /* Добавлено */
 }
 
 [data-theme='dark'] {
@@ -41,6 +44,7 @@
     --accent-color: var(--accent-color-dark);
     --input-bg: var(--input-bg-dark);
     --shadow: var(--shadow-dark);
+    --muted: var(--muted-dark); /* Добавлено */
 }
 
 * {
@@ -139,6 +143,23 @@ input:focus, textarea:focus, select:focus {
     border-color: var(--primary-color);
 }
 
+/* Стили для основных кнопок, таких как "Добавить группу", "Сменить тему" */
+.primary-btn {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s ease;
+    width: 100%; /* Добавлено: кнопки на всю ширину */
+}
+
+.primary-btn:hover {
+    background-color: #0056b3; /* Чуть темнее для ховера */
+}
+
 /* ===================================== */
 /* БОКОВАЯ ПАНЕЛЬ (SIDEBAR)              */
 /* ===================================== */
@@ -146,10 +167,70 @@ input:focus, textarea:focus, select:focus {
     margin-bottom: 15px;
 }
 
+/* НОВОЕ: Стили для секции импорта/экспорта по скриншоту */
+.import-export-section {
+    padding-bottom: 15px; /* Отступ снизу */
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--border-color); /* Разделитель */
+    display: flex; /* Flex-контейнер для кнопок */
+    flex-direction: column; /* Элементы друг под другом */
+    gap: 8px; /* Отступ между рядами кнопок */
+}
+
+.import-buttons-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Две кнопки в ряд */
+    gap: 8px; /* Отступ между кнопками в ряду */
+}
+
+.import-btn {
+    background-color: var(--primary-color); /* Стили кнопок импорта */
+    color: white;
+    border: none;
+    padding: 8px 0px; /* Отступы для кнопок импорта */
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px; /* Чуть меньше шрифт */
+    transition: background-color 0.2s ease;
+    text-align: center;
+    width: 100%; /* Кнопки занимают всю доступную ширину */
+}
+
+.import-btn:hover {
+    opacity: 0.9;
+}
+
+.export-btn {
+    background-color: var(--accent-color); /* Более нейтральный цвет для экспорта */
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s ease;
+}
+
+.export-btn:hover {
+    background-color: var(--border-color);
+}
+
+
 .group-list-container {
     flex-grow: 1;
     overflow-y: auto;
-    margin-bottom: 15px;
+    /* margin-bottom: 15px; Удалено, так как контейнер add-group-and-theme-section управляет отступами */
+}
+
+/* НОВОЕ: Заголовок "Общее" */
+.group-list-title {
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--muted); /* Сероватый цвет */
+    padding: 0 10px 8px 10px; /* Отступы */
+    text-transform: uppercase; /* Верхний регистр */
+    letter-spacing: 0.5px;
 }
 
 .group-list {
@@ -176,6 +257,16 @@ input:focus, textarea:focus, select:focus {
     font-weight: bold;
 }
 
+.group-list li.dragging {
+    opacity: 0.5;
+    border: 1px dashed var(--primary-color);
+}
+
+.group-list li.dragover {
+    background-color: var(--primary-color); /* Подсветка при перетаскивании */
+    color: white;
+}
+
 .delete-group-btn {
     color: #dc3545;
     font-weight: bold;
@@ -188,41 +279,36 @@ input:focus, textarea:focus, select:focus {
     display: inline; /* Появляется при наведении */
 }
 
-.add-group-section {
-    margin-top: auto;
+/* НОВОЕ: Контейнер для кнопки добавления группы и темы */
+.add-group-and-theme-section {
     padding-top: 15px;
     border-top: 1px solid var(--border-color);
+    margin-top: 15px; /* Отступ от group-list-container */
+    display: flex;
+    flex-direction: column;
+    gap: 8px; /* Отступ между секциями */
+}
+
+.add-group-section {
+    /* Стили как на скриншоте */
+    display: flex;
+    flex-direction: column; /* Элементы друг под другом */
+    gap: 8px; /* Отступ между инпутом и кнопкой */
 }
 
 .add-group-section input {
-    margin-bottom: 8px;
+    margin-bottom: 0; /* Удаляем лишний отступ */
 }
 
-.import-export-section {
-    padding-top: 15px;
-    border-top: 1px solid var(--border-color);
-}
 
-.import-buttons {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 8px;
-}
-
-.export-btn {
+.theme-switch-bottom {
+    /* Кнопка смены темы внизу */
     width: 100%;
 }
 
-.theme-switch {
-    margin-top: 15px;
-    padding-top: 15px;
-    border-top: 1px solid var(--border-color);
-}
 
-.theme-switch button {
-    width: 100%;
-}
+/* .add-group-section { Удален старый блок } */
+/* .theme-switch { Удален старый блок } */
 
 /* ===================================== */
 /* ОСНОВНОЙ КОНТЕНТ                      */
@@ -249,6 +335,11 @@ input:focus, textarea:focus, select:focus {
     margin-bottom: 10px;
     padding: 10px;
     box-shadow: var(--shadow);
+}
+
+.bookmark-item.dragging {
+    opacity: 0.5;
+    border: 1px dashed var(--primary-color);
 }
 
 .bookmark-display {
@@ -279,6 +370,11 @@ input:focus, textarea:focus, select:focus {
     overflow: hidden;
     text-overflow: ellipsis;
     display: block;
+    text-decoration: none; /* Убираем подчеркивание */
+}
+
+.bookmark-info .url:hover {
+    text-decoration: underline;
 }
 
 .taglist {
@@ -293,6 +389,11 @@ input:focus, textarea:focus, select:focus {
     border-radius: 10px;
     font-size: 11px;
     margin-right: 5px;
+    cursor: pointer; /* Делаем теги кликабельными */
+}
+
+.tag:hover {
+    opacity: 0.8;
 }
 
 .notes-display {
@@ -386,10 +487,11 @@ input:focus, textarea:focus, select:focus {
 
 .modal-content select {
     width: 100%;
+    margin-bottom: 15px; /* Отступ после select */
 }
 
 .modal-buttons {
-    margin-top: 20px;
+    margin-top: 0; /* Убираем лишний отступ, так как уже есть gap */
     display: flex;
     justify-content: flex-end;
     gap: 10px;
@@ -414,6 +516,7 @@ input:focus, textarea:focus, select:focus {
     box-shadow: var(--shadow);
     opacity: 0;
     animation: toast-fade-in 0.3s forwards;
+    min-width: 250px; /* Чтобы уведомления не были слишком узкими */
 }
 
 .toast.info { background: #cce5ff; color: #004085; }
@@ -421,6 +524,7 @@ input:focus, textarea:focus, select:focus {
 .toast.error { background: #f8d7da; color: #721c24; }
 
 @keyframes toast-fade-in {
+    from { opacity: 0; transform: translateX(20px); }
     to { opacity: 1; transform: translateX(0); }
 }
 
@@ -441,3 +545,22 @@ input:focus, textarea:focus, select:focus {
 .status-ok { background-color: #28a745; }
 .status-broken, .status-error, .status-timeout { background-color: #dc3545; }
 .status-unchecked, .status-unknown { background-color: #6c757d; }
+
+/* ===================================== */
+/* СТИЛИ DRAG & DROP                     */
+/* ===================================== */
+.group-list li.dragging, .bookmark-item.dragging {
+    opacity: 0.5;
+    border: 2px dashed var(--primary-color);
+    background-color: var(--accent-color);
+}
+
+.group-list li.dragover {
+    background-color: var(--primary-color) !important;
+    color: white !important;
+}
+
+/* Убрать search-bar на скриншоте его нет, но если нужен, можно вернуть */
+.search-bar {
+    display: none; 
+}
