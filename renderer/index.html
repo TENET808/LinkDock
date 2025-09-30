@@ -1,103 +1,107 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://www.google.com; connect-src 'self' https://www.google.com;">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LinkDock</title>
-  <link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkDock</title>
+    <link rel="stylesheet" href="./styles.css">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://www.google.com; connect-src 'self' http://* https://*;">
 </head>
 <body>
-  <div id="notifications"></div>
+    <div id="notifications" class="notifications-container"></div>
 
-  <div class="app-container">
-    <div class="sidebar">
-      <div class="header">LinkDock</div>
-      <div class="menu-item import-export">
-        <button id="impChrome" class="btn small">Импорт Chrome</button>
-        <button id="impEdge" class="btn small">Импорт Edge</button>
-        <button id="impFirefox" class="btn small">Импорт Firefox</button>
-        <button id="impJSON" class="btn small">Импорт JSON</button>
-      </div>
-      <div class="menu-item import-export">
-        <button id="btnExport" class="btn small export-btn">Экспорт</button>
-      </div>
+    <div class="container">
+        <div class="sidebar">
+            <div class="logo-area">
+                <img src="./build/icon.png" alt="LinkDock Logo" class="app-logo">
+                <h1>LinkDock</h1>
+            </div>
+            
+            <div class="search-bar">
+                <input type="text" id="search" placeholder="Поиск закладок...">
+            </div>
 
-      <div class="group-list-header">Группы</div> <ul id="groupList" class="group-list">
-        </ul>
+            <div class="group-list-container">
+                <ul id="groupList" class="group-list">
+                    </ul>
+            </div>
 
-      <div class="group-actions">
-        <input type="text" id="newGroupName" placeholder="Название новой группы">
-        <button id="addGroupBtn" class="btn">Добавить группу</button>
-      </div>
+            <div class="add-group-section">
+                <input type="text" id="newGroupName" placeholder="Имя новой группы">
+                <button id="addGroupBtn">Добавить группу</button>
+            </div>
+
+            <div class="import-export-section">
+                <div class="import-buttons">
+                    <button id="impChrome" title="Импорт из Google Chrome">Импорт Chrome</button>
+                    <button id="impEdge" title="Импорт из Microsoft Edge">Импорт Edge</button>
+                    <button id="impFirefox" title="Импорт из Mozilla Firefox">Импорт Firefox</button>
+                    <button id="impJSON" title="Импорт из JSON-файла">Импорт JSON</button>
+                </div>
+                <button id="btnExport" class="export-btn" title="Экспорт всех данных в JSON-файл">Экспорт</button>
+            </div>
+
+            <div class="theme-switch">
+                <button id="btnTheme">Сменить тему</button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="add-bookmark-form">
+                <input type="text" id="title" placeholder="Название закладки">
+                <input type="url" id="url" placeholder="URL-адрес" required>
+                <input type="text" id="tags" placeholder="Теги (через запятую)">
+                <button id="addBtn">Добавить закладку</button>
+            </div>
+
+            <ul id="list" class="bookmark-list">
+                </ul>
+        </div>
     </div>
 
-    <div class="main-content">
-      <div class="top-bar">
-        <input type="text" id="search" placeholder="Поиск (Ctrl+K)" class="search-input">
-        <div class="add-section">
-          <input type="text" id="title" placeholder="Название">
-          <input type="text" id="url" placeholder="URL">
-          <input type="text" id="tags" placeholder="Теги (через запятую)">
-          <button id="addBtn" class="btn">Добавить</button>
+    <div id="moveModal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Переместить закладку</h2>
+            <p>Выберите группу, в которую вы хотите переместить закладку:</p>
+            <select id="moveToGroupSelect"></select>
+            <div class="modal-buttons">
+                <button id="moveCancelBtn">Отмена</button>
+                <button id="moveConfirmBtn" class="primary-btn">Переместить</button>
+            </div>
         </div>
-        <button id="btnTheme" class="btn icon-btn"><span class="icon">💡</span></button>
-      </div>
-
-      <ul id="list" class="bookmark-list">
-        </ul>
     </div>
-  </div>
 
-  <div id="moveModal" class="modal-overlay">
-    <div class="modal-content">
-      <h2>Переместить закладку</h2>
-      <div class="modal-body">
-        <label for="moveGroupSelect">Выбрать существующую группу:</label>
-        <select id="moveGroupSelect"></select>
-        <div class="or-separator">ИЛИ</div>
-        <label for="moveNewGroupInput">Создать новую группу:</label>
-        <input type="text" id="moveNewGroupInput" placeholder="Название новой группы">
-      </div>
-      <div class="modal-footer">
-        <button id="moveCancelBtn" class="btn gray">Отмена</button>
-        <button id="moveConfirmBtn" class="btn">Переместить</button>
-      </div>
-    </div>
-  </div>
+    <template id="tplItem">
+        <li class="bookmark-item" draggable="true">
+            <div class="bookmark-display">
+                <img class="favicon" src="" alt="favicon">
+                <div class="bookmark-info">
+                    <span class="title"></span>
+                    <a class="url" href="#" target="_blank"></a>
+                    <div class="taglist"></div>
+                    <p class="notes-display"></p>
+                </div>
+                <div class="bookmark-actions">
+                    <span class="link-status-icon" title="Статус ссылки"></span> <button class="action-btn pin" title="Закрепить/Открепить">&#9733;</button>
+                    <button class="action-btn open" title="Открыть ссылку">&#128279;</button>
+                    <button class="action-btn edit" title="Редактировать">&#9998;</button>
+                    <button class="action-btn move" title="Переместить">&#8644;</button>
+                    <button class="action-btn del" title="Удалить">&#10006;</button>
+                </div>
+            </div>
+            <div class="bookmark-edit-form">
+                <input type="text" class="edit-title" placeholder="Название">
+                <input type="url" class="edit-url" placeholder="URL">
+                <input type="text" class="edit-tags" placeholder="Теги (через запятую)">
+                <textarea class="edit-notes" placeholder="Заметки"></textarea>
+                <div class="edit-actions">
+                    <button class="action-btn save">Сохранить</button>
+                    <button class="action-btn cancel">Отмена</button>
+                </div>
+            </div>
+        </li>
+    </template>
 
-  <template id="tplItem">
-    <li class="bookmark-item">
-      <div class="display-mode">
-        <img class="favicon" src="" alt="F">
-        <span class="title"></span>
-        <span class="url"></span>
-        <span class="taglist"></span>
-        <span class="notes-display"></span>
-        <div class="actions">
-          <span class="pin icon-btn" title="Закрепить/открепить">📌</span>
-          <span class="open icon-btn" title="Открыть">↗️</span>
-          <span class="move icon-btn" title="Переместить">📁</span>
-          <span class="edit icon-btn" title="Редактировать">✍️</span>
-          <span class="del icon-btn" title="Удалить">🗑️</span>
-        </div>
-        <span class="link-status-icon" title="Статус ссылки"></span>
-      </div>
-      
-      <div class="edit-mode">
-        <input type="text" class="edit-title" placeholder="Название">
-        <input type="text" class="edit-url" placeholder="URL">
-        <input type="text" class="edit-tags" placeholder="Теги (через запятую)">
-        <textarea class="edit-notes" placeholder="Заметки"></textarea>
-        <div class="edit-actions">
-          <button class="save btn">Сохранить</button>
-          <button class="cancel btn gray">Отмена</button>
-        </div>
-      </div>
-    </li>
-  </template>
-
-  <script src="preload.js"></script>
-  <script src="renderer.js"></script>
+    <script src="renderer.js"></script>
 </body>
 </html>
