@@ -1,36 +1,28 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, Menu, globalShortcut, nativeTheme, Tray } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, Menu, globalShortcut, nativeTheme, Tray, nativeImage } = require('electron'); // ИЗМЕНЕНИЕ: Добавили 'nativeImage'
 const path = require('path');
 const fs = require('fs');
 const Store = require('electron-store');
 const { autoUpdater } = require('electron-updater');
 
-// --- ХРАНИЛИЩЕ ---
-const store = new Store({
-  name: 'linkdock-data',
-  defaults: {
-    ui: { 
-      bounds: { width: 1100, height: 700 }, 
-      theme: 'light',
-      minimizeToTray: false // Настройка для трея
-    },
-    groups: [ { id: 'default', name: 'Общее', order: 0 } ],
-    bookmarks: [],
-    windows: {}
-  }
-});
-
+// ... (весь код до createTray без изменений) ...
+const store = new Store({ /* ... */ });
 let mainWindow;
-let tray = null; // Переменная для хранения иконки в трее
+let tray = null;
 
 // --- ФУНКЦИЯ СОЗДАНИЯ ТРЕЯ ---
 function createTray() {
-  const iconPath = path.join(__dirname, 'build/icon.png');
-  tray = new Tray(iconPath);
+  // ИЗМЕНЕНИЕ: Используем nativeImage для безопасной загрузки иконки
+  const iconPath = path.join(__dirname, 'build/icon.png'); 
+  const icon = nativeImage.createFromPath(iconPath);
+  tray = new Tray(icon);
+  
   const contextMenu = Menu.buildFromTemplate([
-    { label: 'Развернуть', click: () => mainWindow.show() },
+    { label: 'Развернуть', click: () => {
+      if (mainWindow) mainWindow.show();
+    }},
     { type: 'separator' },
     { label: 'Выход', click: () => { 
-        app.isQuitting = true; // Устанавливаем флаг, что выход инициирован пользователем
+        app.isQuitting = true;
         app.quit(); 
       } 
     }
@@ -38,14 +30,12 @@ function createTray() {
   tray.setToolTip('LinkDock');
   tray.setContextMenu(contextMenu);
   tray.on('click', () => {
-    // По клику показываем окно, если оно было скрыто
-    if (mainWindow) {
-      mainWindow.show();
-    }
+    if (mainWindow) mainWindow.show();
   });
 }
 
-// --- ФУНКЦИЯ СОЗДАНИЯ ГЛАВНОГО ОКНА ---
+// ... (остальной код main.js без изменений) ...
+
 function createMainWindow(){
   const { bounds } = store.get('ui');
   mainWindow = new BrowserWindow({
@@ -58,23 +48,19 @@ function createMainWindow(){
       contextIsolation: true,
       nodeIntegration: false
     },
-    icon: path.join(__dirname, 'build/icon.png'),
+    icon: path.join(__dirname, 'build/icon.png'), // здесь можно оставить path, т.к. BrowserWindow это умеет
     title: 'LinkDock'
   });
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
-
-  // ОБНОВЛЕННЫЙ ОБРАБОТЧИК ЗАКРЫТИЯ ОКНА
+  
   mainWindow.on('close', (event) => {
     store.set('ui.bounds', mainWindow.getBounds());
-    // Если опция включена и выход не из меню трея
     if (store.get('ui.minimizeToTray') && !app.isQuitting) {
-      event.preventDefault(); // Отменяем стандартное закрытие
-      mainWindow.hide();      // Просто скрываем окно
+      event.preventDefault();
+      mainWindow.hide();
     }
-    // Если опция выключена или выход из меню, окно закроется штатно
   });
 
-  // ОБНОВЛЕННЫЙ ШАБЛОН МЕНЮ
   const template = [
     { label: 'Файл', submenu: [
       { label: 'Импорт JSON', click: ()=> mainWindow.webContents.send('ui:importJSON') },
@@ -100,18 +86,29 @@ function createMainWindow(){
     ]}
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
-
   globalShortcut.register('Control+K', () => mainWindow.webContents.send('ui:focusSearch'));
 }
 
+function setTheme(theme){
+  store.set('ui.theme', theme);
+  nativeTheme.themeSource = theme === 'dark' ? 'dark' : 'light';
+  if (mainWindow) mainWindow.webContents.send('ui:theme', theme);
+}
 
-// --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (без изменений) ---
-function setTheme(theme){ /* ... */ }
-function backupData() { /* ... */ }
-function urlHash(url){ /* ... */ }
-function createLinkWindow(url){ /* ... */ }
+function backupData() {
+  const dataPath = store.path;
+  if (!fs.existsSync(dataPath)) return;
+  const backupDir = path.join(path.dirname(dataPath), 'backups');
+  if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir);
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const backupPath = path.join(backupDir, `linkdock-data-backup-${timestamp}.json`);
+  try {
+    fs.copyFileSync(dataPath, backupPath);
+  } catch (err) {
+    console.error('Failed to create backup:', err);
+  }
+}
 
-// --- СОБЫТИЯ ЖИЗНЕННОГО ЦИКЛА ПРИЛОЖЕНИЯ ---
 app.whenReady().then(() => {
   createTray();
   setTheme(store.get('ui.theme'));
@@ -122,31 +119,28 @@ app.whenReady().then(() => {
   });
 });
 
-app.on('before-quit', () => {
-  // Устанавливаем флаг, чтобы обработчик 'close' знал, что нужно закрыть приложение
-  app.isQuitting = true;
-});
+app.on('before-quit', () => { app.isQuitting = true; });
+app.on('will-quit', () => { backupData(); globalShortcut.unregisterAll(); });
+app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
-app.on('will-quit', () => {
-  backupData();
-  globalShortcut.unregisterAll();
-});
+function urlHash(url){ return Buffer.from(url).toString('base64').slice(0, 24); }
 
-app.on('window-all-closed', () => { 
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
+function createLinkWindow(url){
+  const hash = urlHash(url);
+  const winBounds = store.get(`windows.${hash}`) || { width: 1200, height: 800 };
+  const partition = `persist:link-${hash}`;
+  const win = new BrowserWindow({ ...winBounds, webPreferences: { partition, sandbox: false }, title: url });
+  win.loadURL(url);
+  win.on('close', () => store.set(`windows.${hash}` , win.getBounds()));
+  return win;
+}
 
-
-// --- ОБРАБОТЧИКИ IPC ---
 ipcMain.handle('store:getAll', () => store.store);
 ipcMain.handle('store:save', (e, payload) => { store.set(payload.key, payload.value); return true; });
 ipcMain.handle('ui:getTheme', () => store.get('ui.theme'));
 ipcMain.handle('ui:setTheme', (e, theme) => { setTheme(theme); return true; });
 ipcMain.handle('link:open', (e, url) => { try { createLinkWindow(url); return { ok: true }; } catch (err) { return { ok: false, error: String(err) }; } });
 
-// НОВЫЙ ОБРАБОТЧИК ДЛЯ ДИАЛОГА УДАЛЕНИЯ
 ipcMain.handle('dialog:showDeleteGroup', async (e, groupName) => {
   const { response } = await dialog.showMessageBox(mainWindow, {
     type: 'question',
@@ -157,15 +151,57 @@ ipcMain.handle('dialog:showDeleteGroup', async (e, groupName) => {
     defaultId: 0,
     cancelId: 0
   });
-  return response; // 0: Отмена, 1: Переместить, 2: Удалить всё
+  return response;
 });
 
 ipcMain.handle('file:importBookmarks', async (e, from) => {
-  // ... (весь код импорта из Chrome/Edge/Firefox/JSON без изменений)
+  try {
+    if (from === 'chrome' || from === 'edge'){
+      const local = process.env.LOCALAPPDATA;
+      const map = {
+        chrome: path.join(local, 'Google/Chrome/User Data/Default/Bookmarks'),
+        edge:   path.join(local, 'Microsoft/Edge/User Data/Default/Bookmarks')
+      };
+      const p = map[from];
+      if (!fs.existsSync(p)) throw new Error('Файл закладок не найден');
+      const raw = JSON.parse(fs.readFileSync(p, 'utf-8'));
+      const list = [];
+      function walk(node, groupPath=[]){
+        if (!node) return;
+        if (node.type === 'url') list.push({ title: node.name, url: node.url, groupPath: groupPath.join(' / ') || 'Импорт' });
+        else if (node.children){ const gp = node.name ? [...groupPath, node.name] : groupPath; node.children.forEach(ch => walk(ch, gp)); }
+      }
+      ['bookmark_bar','other','synced'].forEach(k => walk(raw?.roots?.[k]));
+      applyImportedList(list);
+      return { ok: true, added: list.length };
+    }
+    if (from === 'firefox'){
+      const ff = path.join(process.env.APPDATA, 'Mozilla/Firefox');
+      const profilesIni = path.join(ff, 'profiles.ini');
+      if (!fs.existsSync(profilesIni)) throw new Error('Firefox профиль не найден');
+      const ini = fs.readFileSync(profilesIni, 'utf-8');
+      const prof = /Path=(.*)/.exec(ini)?.[1];
+      if (!prof) throw new Error('Не удалось определить профиль Firefox');
+      const dbPath = path.join(ff, prof, 'places.sqlite');
+      if (!fs.existsSync(dbPath)) throw new Error('places.sqlite не найден');
+      const Database = require('better-sqlite3');
+      const db = new Database(dbPath, { readonly: true });
+      const rows = db.prepare(`SELECT b.title as title, p.url as url, f.title as folder FROM moz_bookmarks b JOIN moz_places p ON p.id = b.fk LEFT JOIN moz_bookmarks f ON f.id = b.parent WHERE b.type = 1 AND p.url LIKE 'http%'`).all();
+      db.close();
+      const list = rows.map(r => ({ title: r.title || r.url, url: r.url, groupPath: r.folder || 'Firefox' }));
+      applyImportedList(list);
+      return { ok: true, added: list.length };
+    }
+    const { canceled, filePaths } = await dialog.showOpenDialog({ title: 'Выберите JSON с закладками', filters: [{ name: 'JSON', extensions: ['json'] }], properties: ['openFile'] });
+    if (canceled) return { ok: false, error: 'Отменено' };
+    const raw = JSON.parse(fs.readFileSync(filePaths[0], 'utf-8'));
+    if (!raw.bookmarks || !raw.groups) throw new Error('Неверный формат файла');
+    store.set('groups', raw.groups);
+    store.set('bookmarks', raw.bookmarks);
+    return { ok: true, imported: raw.bookmarks.length };
+  } catch (err){ return { ok: false, error: String(err) }; }
 });
 
-
-// ОБНОВЛЕННАЯ ФУНКЦИЯ ИМПОРТА С ДЕДУПЛИКАЦИЕЙ
 function applyImportedList(list){
   const groups = store.get('groups');
   const bookmarks = store.get('bookmarks');
@@ -174,9 +210,7 @@ function applyImportedList(list){
     if (!g){ g = { id: `g_${Date.now()}_${Math.random().toString(16).slice(2)}`, name, order: groups.length }; groups.push(g); }
     return g.id;
   };
-  
   const existingUrls = new Set(bookmarks.map(b => b.url));
-
   list.forEach(b => {
     if (b.url && !existingUrls.has(b.url)) {
       const gid = ensureGroup(b.groupPath);
@@ -188,5 +222,12 @@ function applyImportedList(list){
   store.set('bookmarks', bookmarks);
 }
 
-ipcMain.handle('file:export', async () => { /* ... */ });
+ipcMain.handle('file:export', async () => {
+  const { canceled, filePath } = await dialog.showSaveDialog({ title: 'Сохранить экспорт', filters: [{ name: 'JSON', extensions: ['json'] }], defaultPath: 'linkdock-export.json' });
+  if (canceled) return { ok: false, error: 'Отменено' };
+  fs.writeFileSync(filePath, JSON.stringify({ groups: store.get('groups'), bookmarks: store.get('bookmarks') }, null, 2), 'utf-8');
+  shell.showItemInFolder(filePath);
+  return { ok: true, path: filePath };
+});
+
 autoUpdater.on('update-downloaded', () => { if (mainWindow) mainWindow.webContents.send('ui:updateReady'); });
