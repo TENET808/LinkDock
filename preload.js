@@ -11,10 +11,10 @@ contextBridge.exposeInMainWorld('linkdock', {
   on: (channel, callback) => ipcRenderer.on(channel, (event, ...args) => callback(...args)),
 
   // Link actions
-  openLink: (url) => shell.openExternal(url),
+  openExternalLink: (url) => shell.openExternal(url), // ИЗМЕНЕНО: Переименовано для ясности
   openInAppBrowser: (url) => ipcRenderer.invoke('link:open', url),
-  checkAllLinks: () => ipcRenderer.invoke('links:checkAll'), // НОВОЕ: Для запуска проверки ссылок
-  onLinkCheckProgress: (callback) => ipcRenderer.on('links:checkProgress', (event, ...args) => callback(...args)), // НОВОЕ: Для получения прогресса
+  checkAllLinks: () => ipcRenderer.invoke('links:checkAll'),
+  onLinkCheckProgress: (callback) => ipcRenderer.on('links:checkProgress', (event, ...args) => callback(...args)),
 
   // Dialogs
   showDeleteGroupDialog: (groupName) => ipcRenderer.invoke('dialog:showDeleteGroup', groupName),
