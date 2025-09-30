@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog, shell, Menu, globalShortcut, native
 const path = require('path');
 const fs = require('fs');
 const Store = require('electron-store');
-// const { autoUpdater } = require('electron-updater'); // ОТКЛЮЧЕНО ДЛЯ ДИАГНОСТИКИ
+const { autoUpdater } = require('electron-updater'); // ВКЛЮЧЕНО
 
 // --- ХРАНИЛИЩЕ ---
 const store = new Store({
@@ -124,7 +124,7 @@ app.whenReady().then(() => {
   createTray();
   setTheme(store.get('ui.theme'));
   createMainWindow();
-  // autoUpdater.checkForUpdatesAndNotify(); // ОТКЛЮЧЕНО ДЛЯ ДИАГНОСТИКИ
+  autoUpdater.checkForUpdatesAndNotify(); // ВКЛЮЧЕНО
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
   });
@@ -241,4 +241,4 @@ ipcMain.handle('file:export', async () => {
   return { ok: true, path: filePath };
 });
 
-// autoUpdater.on('update-downloaded', () => { if (mainWindow) mainWindow.webContents.send('ui:updateReady'); }); // ОТКЛЮЧЕНО ДЛЯ ДИАГНОСТИКИ
+autoUpdater.on('update-downloaded', () => { if (mainWindow) mainWindow.webContents.send('ui:updateReady'); }); // ВКЛЮЧЕНО
