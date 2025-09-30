@@ -1,17 +1,29 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, Menu, globalShortcut, nativeTheme, Tray, nativeImage } = require('electron'); // ИЗМЕНЕНИЕ: Добавили 'nativeImage'
+const { app, BrowserWindow, ipcMain, dialog, shell, Menu, globalShortcut, nativeTheme, Tray, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const Store = require('electron-store');
-const { autoUpdater } = require('electron-updater');
+// const { autoUpdater } = require('electron-updater'); // ОТКЛЮЧЕНО ДЛЯ ДИАГНОСТИКИ
 
-// ... (весь код до createTray без изменений) ...
-const store = new Store({ /* ... */ });
+// --- ХРАНИЛИЩЕ ---
+const store = new Store({
+  name: 'linkdock-data',
+  defaults: {
+    ui: { 
+      bounds: { width: 1100, height: 700 }, 
+      theme: 'light',
+      minimizeToTray: false 
+    },
+    groups: [ { id: 'default', name: 'Общее', order: 0 } ],
+    bookmarks: [],
+    windows: {}
+  }
+});
+
 let mainWindow;
 let tray = null;
 
 // --- ФУНКЦИЯ СОЗДАНИЯ ТРЕЯ ---
 function createTray() {
-  // ИЗМЕНЕНИЕ: Используем nativeImage для безопасной загрузки иконки
   const iconPath = path.join(__dirname, 'build/icon.png'); 
   const icon = nativeImage.createFromPath(iconPath);
   tray = new Tray(icon);
@@ -34,8 +46,7 @@ function createTray() {
   });
 }
 
-// ... (остальной код main.js без изменений) ...
-
+// --- ФУНКЦИЯ СОЗДАНИЯ ГЛАВНОГО ОКНА ---
 function createMainWindow(){
   const { bounds } = store.get('ui');
   mainWindow = new BrowserWindow({
@@ -48,7 +59,7 @@ function createMainWindow(){
       contextIsolation: true,
       nodeIntegration: false
     },
-    icon: path.join(__dirname, 'build/icon.png'), // здесь можно оставить path, т.к. BrowserWindow это умеет
+    icon: path.join(__dirname, 'build/icon.png'),
     title: 'LinkDock'
   });
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
@@ -113,7 +124,7 @@ app.whenReady().then(() => {
   createTray();
   setTheme(store.get('ui.theme'));
   createMainWindow();
-  autoUpdater.checkForUpdatesAndNotify();
+  // autoUpdater.checkForUpdatesAndNotify(); // ОТКЛЮЧЕНО ДЛЯ ДИАГНОСТИКИ
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
   });
@@ -230,4 +241,4 @@ ipcMain.handle('file:export', async () => {
   return { ok: true, path: filePath };
 });
 
-autoUpdater.on('update-downloaded', () => { if (mainWindow) mainWindow.webContents.send('ui:updateReady'); });
+// autoUpdater.on('update-downloaded', () => { if (mainWindow) mainWindow.webContents.send('ui:updateReady'); }); // ОТКЛЮЧЕНО ДЛЯ ДИАГНОСТИКИ
