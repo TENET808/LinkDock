@@ -96,7 +96,7 @@ body {
     align-items: center;
     gap: 10px;
     margin-bottom: 20px;
-    padding-left: 5px;
+    /* ИСПРАВЛЕНИЕ 1: padding-left: 5px; удален, чтобы прижать к краю */
 }
 
 .app-logo {
@@ -511,12 +511,42 @@ input:focus, textarea:focus, select:focus {
 }
 
 .toast {
-    padding: 12px 18px;
-    border-radius: 6px;
+    background-color: var(--secondary-bg);
+    color: var(--text-color);
+    padding: 10px 15px;
+    border-radius: 5px;
     box-shadow: var(--shadow);
     opacity: 0;
-    animation: toast-fade-in 0.3s forwards;
-    min-width: 250px; /* Чтобы уведомления не были слишком узкими */
+    animation: fadeInOut 10s forwards; /* ИСПРАВЛЕНИЕ 3: Длительность анимации 10 секунд */
+    min-width: 250px;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    position: relative; /* Для позиционирования кнопки закрытия */
+    padding-right: 30px; /* Оставляем место для крестика */
+}
+
+/* НОВЫЙ КОД для кнопки закрытия уведомления */
+.toast-close {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--muted);
+    font-weight: bold;
+}
+.toast-close:hover {
+    color: var(--text-color);
+}
+
+
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: translateY(20px); }
+    5% { opacity: 1; transform: translateY(0); }   /* Быстрое появление */
+    95% { opacity: 1; transform: translateY(0); }  /* Держится на экране */
+    100% { opacity: 0; transform: translateY(20px); } /* Плавное исчезновение */
 }
 
 .toast.info { background: #cce5ff; color: #004085; }
