@@ -8,5 +8,7 @@ contextBridge.exposeInMainWorld('linkdock', {
   exportData: () => ipcRenderer.invoke('file:export'),
   getTheme: () => ipcRenderer.invoke('ui:getTheme'),
   setTheme: (t) => ipcRenderer.invoke('ui:setTheme', t),
+  // НОВАЯ ФУНКЦИЯ
+  showDeleteGroupDialog: (groupName) => ipcRenderer.invoke('dialog:showDeleteGroup', groupName),
   on: (ch, cb) => ipcRenderer.on(ch, (_e, ...args) => cb(...args))
 });
