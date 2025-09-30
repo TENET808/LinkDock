@@ -3,6 +3,9 @@ const path = require('path');
 const fs = require('fs');
 const Store = require('electron-store');
 const { autoUpdater } = require('electron-updater'); // ВКЛЮЧЕНО
+const http = require('http'); // Добавлено для HTTP HEAD запросов
+const https = require('https'); // Добавлено для HTTPS HEAD запросов
+
 
 // --- ХРАНИЛИЩЕ ---
 const store = new Store({
@@ -120,11 +123,84 @@ function backupData() {
   }
 }
 
+// --- ЛОГИКА ПРОВЕРКИ ССЫЛОК ---
+async function checkLinkStatus(url) {
+  return new Promise((resolve) => {
+    const protocol = url.startsWith('https') ? https : http;
+    const options = {
+      method: 'HEAD', // Используем HEAD-запрос для получения только заголовков
+      timeout: 10000, // Таймаут 10 секунд
+      maxRedirects: 5 // Максимум 5 редиректов
+    };
+
+    const req = protocol.request(url, options, (res) => {
+      // 2xx, 3xx коды обычно означают, что ссылка "живая"
+      if (res.statusCode >= 200 && res.statusCode < 400) {
+        resolve('ok');
+      } else if (res.statusCode >= 400 && res.statusCode < 500) {
+        resolve('broken'); // 4xx ошибки - битая ссылка
+      } else {
+        resolve('unknown'); // Другие ошибки сервера
+      }
+      res.resume(); // Потребляем данные ответа, чтобы избежать утечек памяти
+    });
+
+    req.on('error', (err) => {
+      if (err.code === 'ENOTFOUND' || err.code === 'ECONNREFUSED' || err.code === 'ERR_INVALID_URL') {
+        resolve('broken'); // DNS-ошибка, отказ в соединении, неверный URL
+      } else if (err.code === 'ETIMEDOUT') {
+        resolve('timeout'); // Таймаут
+      } else {
+        resolve('error'); // Другие сетевые ошибки
+      }
+    });
+
+    req.on('timeout', () => {
+      req.destroy();
+      resolve('timeout');
+    });
+
+    req.end();
+  });
+}
+
+// IPC-обработчик для запуска проверки всех ссылок
+ipcMain.handle('links:checkAll', async (event) => {
+  const bookmarks = store.get('bookmarks');
+  const results = [];
+  const chunkSize = 10; // Проверяем по 10 ссылок одновременно
+  
+  for (let i = 0; i < bookmarks.length; i += chunkSize) {
+    const chunk = bookmarks.slice(i, i + chunkSize);
+    const chunkPromises = chunk.map(async (bookmark) => {
+      const status = await checkLinkStatus(bookmark.url);
+      bookmark.lastCheckStatus = status; // Добавляем новый статус к закладке
+      bookmark.lastCheckDate = new Date().toISOString(); // Дата последней проверки
+      results.push({ id: bookmark.id, status, url: bookmark.url });
+      return bookmark;
+    });
+    // Ждем завершения текущей пачки перед началом следующей, чтобы избежать перегрузки
+    await Promise.all(chunkPromises);
+    // Отправляем промежуточный прогресс в рендерер (опционально)
+    if (mainWindow) {
+        mainWindow.webContents.send('links:checkProgress', { 
+            processed: Math.min(i + chunkSize, bookmarks.length), 
+            total: bookmarks.length 
+        });
+    }
+  }
+
+  store.set('bookmarks', bookmarks); // Сохраняем обновленные закладки
+  return { ok: true, results };
+});
+
+
+// --- ELECTRON ЖИЗНЕННЫЙ ЦИКЛ ---
 app.whenReady().then(() => {
   createTray();
   setTheme(store.get('ui.theme'));
   createMainWindow();
-  autoUpdater.checkForUpdatesAndNotify(); // ВКЛЮЧЕНО
+  autoUpdater.checkForUpdatesAndNotify();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
   });
@@ -134,6 +210,7 @@ app.on('before-quit', () => { app.isQuitting = true; });
 app.on('will-quit', () => { backupData(); globalShortcut.unregisterAll(); });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
+// --- УТИЛИТЫ ---
 function urlHash(url){ return Buffer.from(url).toString('base64').slice(0, 24); }
 
 function createLinkWindow(url){
@@ -146,6 +223,7 @@ function createLinkWindow(url){
   return win;
 }
 
+// --- IPC ОБРАБОТЧИКИ ---
 ipcMain.handle('store:getAll', () => store.store);
 ipcMain.handle('store:save', (e, payload) => { store.set(payload.key, payload.value); return true; });
 ipcMain.handle('ui:getTheme', () => store.get('ui.theme'));
@@ -241,4 +319,4 @@ ipcMain.handle('file:export', async () => {
   return { ok: true, path: filePath };
 });
 
-autoUpdater.on('update-downloaded', () => { if (mainWindow) mainWindow.webContents.send('ui:updateReady'); }); // ВКЛЮЧЕНО
+autoUpdater.on('update-downloaded', () => { if (mainWindow) mainWindow.webContents.send('ui:updateReady'); });
