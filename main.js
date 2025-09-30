@@ -2,9 +2,9 @@ const { app, BrowserWindow, ipcMain, dialog, shell, Menu, globalShortcut, native
 const path = require('path');
 const fs = require('fs');
 const Store = require('electron-store');
-const { autoUpdater } = require('electron-updater'); // ВКЛЮЧЕНО
-const http = require('http'); // Добавлено для HTTP HEAD запросов
-const https = require('https'); // Добавлено для HTTPS HEAD запросов
+const { autoUpdater } = require('electron-updater');
+const http = require('http');
+const https = require('https');
 
 
 // --- ХРАНИЛИЩЕ ---
@@ -124,34 +124,55 @@ function backupData() {
 }
 
 // --- ЛОГИКА ПРОВЕРКИ ССЫЛОК ---
-async function checkLinkStatus(url) {
+async function checkLinkStatus(url, redirects = 0) {
   return new Promise((resolve) => {
-    const protocol = url.startsWith('https') ? https : http;
+    // Кодируем URL, чтобы избежать ошибок с неэкранированными символами
+    let parsedUrl;
+    try {
+        parsedUrl = new URL(encodeURI(url)); // Используем encodeURI
+    } catch (e) {
+        return resolve('broken'); // Неверный URL после кодирования
+    }
+
+    const protocolModule = parsedUrl.protocol === 'https:' ? https : http;
     const options = {
-      method: 'HEAD', // Используем HEAD-запрос для получения только заголовков
-      timeout: 10000, // Таймаут 10 секунд
-      maxRedirects: 5 // Максимум 5 редиректов
+      method: 'HEAD',
+      hostname: parsedUrl.hostname,
+      path: parsedUrl.pathname + parsedUrl.search,
+      timeout: 10000,
     };
 
-    const req = protocol.request(url, options, (res) => {
-      // 2xx, 3xx коды обычно означают, что ссылка "живая"
+    const req = protocolModule.request(options, (res) => {
+      // Handle redirects
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        if (redirects < 5) { // Max 5 redirects
+          // Рекурсивно проверяем новую локацию
+          checkLinkStatus(res.headers.location, redirects + 1).then(resolve);
+          res.resume();
+          return;
+        } else {
+          res.resume();
+          return resolve('broken'); // Too many redirects
+        }
+      }
+
       if (res.statusCode >= 200 && res.statusCode < 400) {
         resolve('ok');
       } else if (res.statusCode >= 400 && res.statusCode < 500) {
-        resolve('broken'); // 4xx ошибки - битая ссылка
+        resolve('broken');
       } else {
-        resolve('unknown'); // Другие ошибки сервера
+        resolve('unknown');
       }
-      res.resume(); // Потребляем данные ответа, чтобы избежать утечек памяти
+      res.resume();
     });
 
     req.on('error', (err) => {
       if (err.code === 'ENOTFOUND' || err.code === 'ECONNREFUSED' || err.code === 'ERR_INVALID_URL') {
-        resolve('broken'); // DNS-ошибка, отказ в соединении, неверный URL
+        resolve('broken');
       } else if (err.code === 'ETIMEDOUT') {
-        resolve('timeout'); // Таймаут
+        resolve('timeout');
       } else {
-        resolve('error'); // Другие сетевые ошибки
+        resolve('error');
       }
     });
 
@@ -168,20 +189,25 @@ async function checkLinkStatus(url) {
 ipcMain.handle('links:checkAll', async (event) => {
   const bookmarks = store.get('bookmarks');
   const results = [];
-  const chunkSize = 10; // Проверяем по 10 ссылок одновременно
+  const chunkSize = 10;
   
   for (let i = 0; i < bookmarks.length; i += chunkSize) {
     const chunk = bookmarks.slice(i, i + chunkSize);
     const chunkPromises = chunk.map(async (bookmark) => {
-      const status = await checkLinkStatus(bookmark.url);
-      bookmark.lastCheckStatus = status; // Добавляем новый статус к закладке
-      bookmark.lastCheckDate = new Date().toISOString(); // Дата последней проверки
-      results.push({ id: bookmark.id, status, url: bookmark.url });
+      // Проверяем только если статус "unchecked" или проверялся более недели назад
+      const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const lastCheck = bookmark.lastCheckDate ? new Date(bookmark.lastCheckDate) : null;
+
+      if (bookmark.lastCheckStatus === 'unchecked' || !lastCheck || lastCheck < oneWeekAgo) {
+        const status = await checkLinkStatus(bookmark.url);
+        bookmark.lastCheckStatus = status;
+        bookmark.lastCheckDate = new Date().toISOString();
+      }
+      results.push({ id: bookmark.id, status: bookmark.lastCheckStatus, url: bookmark.url });
       return bookmark;
     });
-    // Ждем завершения текущей пачки перед началом следующей, чтобы избежать перегрузки
+    
     await Promise.all(chunkPromises);
-    // Отправляем промежуточный прогресс в рендерер (опционально)
     if (mainWindow) {
         mainWindow.webContents.send('links:checkProgress', { 
             processed: Math.min(i + chunkSize, bookmarks.length), 
@@ -190,7 +216,7 @@ ipcMain.handle('links:checkAll', async (event) => {
     }
   }
 
-  store.set('bookmarks', bookmarks); // Сохраняем обновленные закладки
+  store.set('bookmarks', bookmarks);
   return { ok: true, results };
 });
 
@@ -257,10 +283,24 @@ ipcMain.handle('file:importBookmarks', async (e, from) => {
       const list = [];
       function walk(node, groupPath=[]){
         if (!node) return;
-        if (node.type === 'url') list.push({ title: node.name, url: node.url, groupPath: groupPath.join(' / ') || 'Импорт' });
-        else if (node.children){ const gp = node.name ? [...groupPath, node.name] : groupPath; node.children.forEach(ch => walk(ch, gp)); }
+        // Игнорируем специфичные для браузера группы, которые не хотим переносить
+        if (['bookmark_bar','other','synced'].includes(node.name?.toLowerCase())) {
+            node.children?.forEach(ch => walk(ch, groupPath)); // Продолжаем обход без добавления этого узла в groupPath
+        } else if (node.type === 'url') {
+            list.push({ title: node.name, url: node.url, groupPath: groupPath.join(' / ') || 'Импорт' });
+        } else if (node.children){ 
+            const gp = node.name ? [...groupPath, node.name] : groupPath; 
+            node.children.forEach(ch => walk(ch, gp)); 
+        }
       }
-      ['bookmark_bar','other','synced'].forEach(k => walk(raw?.roots?.[k]));
+      // Начинаем обход с корневых папок, но только тех, которые содержат закладки
+      ['bookmark_bar','other','synced'].forEach(k => {
+          const rootNode = raw?.roots?.[k];
+          if (rootNode) {
+              // Специально не передаем имя rootNode как groupPath для этих верхних уровней
+              rootNode.children?.forEach(child => walk(child, ['Импорт'])); // Все импортированные будут в "Импорт" по умолчанию
+          }
+      });
       applyImportedList(list);
       return { ok: true, added: list.length };
     }
