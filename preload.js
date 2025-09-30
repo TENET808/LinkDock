@@ -1,25 +1,17 @@
-const { contextBridge, ipcRenderer, shell } = require('electron');
+const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('linkdock', {
-  // Store methods
   getAll: () => ipcRenderer.invoke('store:getAll'),
   save: (key, value) => ipcRenderer.invoke('store:save', { key, value }),
-
-  // UI methods
   getTheme: () => ipcRenderer.invoke('ui:getTheme'),
   setTheme: (theme) => ipcRenderer.invoke('ui:setTheme', theme),
-  on: (channel, callback) => ipcRenderer.on(channel, (event, ...args) => callback(...args)),
-
-  // Link actions
-  openExternalLink: (url) => shell.openExternal(url), // ИЗМЕНЕНО: Переименовано для ясности
-  openInAppBrowser: (url) => ipcRenderer.invoke('link:open', url),
-  checkAllLinks: () => ipcRenderer.invoke('links:checkAll'),
-  onLinkCheckProgress: (callback) => ipcRenderer.on('links:checkProgress', (event, ...args) => callback(...args)),
-
-  // Dialogs
-  showDeleteGroupDialog: (groupName) => ipcRenderer.invoke('dialog:showDeleteGroup', groupName),
-
-  // File operations
-  importBookmarks: (from) => ipcRenderer.invoke('file:importBookmarks', from),
-  exportData: () => ipcRenderer.invoke('file:export')
+  openLink: (url) => ipcRenderer.invoke('link:open', url),
+  exportData: () => ipcRenderer.invoke('file:export'),
+  on: (channel, callback) => {
+    ipcRenderer.on(channel, (event, ...args) => callback(...args));
+  },
+  // --- НОВЫЕ ФУНКЦИИ ДЛЯ ПРОВЕРКИ ССЫЛОК ---
+  checkAllLinks: () => ipcRenderer.invoke('links:checkAll'), // Запустить проверку всех ссылок
+  onLinkCheckProgress: (callback) => ipcRenderer.on('links:checkProgress', (event, ...args) => callback(...args)), // Получать прогресс проверки
+  onStartLinkCheck: (callback) => ipcRenderer.on('links:startCheck', (event, ...args) => callback(...args)) // Для запуска из меню main-процесса
 });
