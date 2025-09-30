@@ -1,123 +1,537 @@
-:root{
-  --bg: #ffffff;
-  --fg: #111111;
-  --muted:#555;
-  --border:#e5e7eb;
-  --panel:#ffffff;
-  --btn:#222;
-  --btn-text:#fff;
-  --success: #28a745;
-  --error: #dc3545;
+/* ===================================== */
+/* Базовые стили и сброс CSS             */
+/* ===================================== */
+:root {
+    --bg-color-light: #f4f7f6;
+    --text-color-light: #333;
+    --border-color-light: #ddd;
+    --primary-color-light: #007bff;
+    --secondary-bg-light: #ffffff;
+    --accent-color-light: #e9ecef; /* Для ховера, активных элементов */
+    --input-bg-light: #ffffff;
+    --shadow-light: 0 2px 5px rgba(0,0,0,0.1);
+
+    --bg-color-dark: #202b33;
+    --text-color-dark: #e0e0e0;
+    --border-color-dark: #3a4750;
+    --primary-color-dark: #007bff; /* Можно изменить на более темный синий, если нужно */
+    --secondary-bg-dark: #283742;
+    --accent-color-dark: #34495e; /* Для ховера, активных элементов */
+    --input-bg-dark: #3a4750;
+    --shadow-dark: 0 4px 10px rgba(0,0,0,0.3);
 }
 
-[data-theme="dark"]{
-  --bg:#0f1115;
-  --fg:#e5e7eb;
-  --muted:#a3a3a3;
-  --border:#2a2f3a;
-  --panel:#161a22;
-  --btn:#2f81f7;
-  --btn-text:#0b1020;
+[data-theme='light'] {
+    --bg-color: var(--bg-color-light);
+    --text-color: var(--text-color-light);
+    --border-color: var(--border-color-light);
+    --primary-color: var(--primary-color-light);
+    --secondary-bg: var(--secondary-bg-light);
+    --accent-color: var(--accent-color-light);
+    --input-bg: var(--input-bg-light);
+    --shadow: var(--shadow-light);
 }
 
-* { box-sizing: border-box; }
-body { margin:0; font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial; color:var(--fg); background:var(--bg); }
-.layout { display:grid; grid-template-columns: 280px 1fr; height:100vh; }
-.sidebar { border-right:1px solid var(--border); padding:12px; display:flex; flex-direction:column; gap:12px; background:var(--panel); }
-.side-header { display:flex; align-items:center; justify-content:space-between; }
-.side-actions{ display:flex; gap:6px; }
-.import-group { display:flex; flex-direction:column; gap:6px; }
-.btn { background:var(--btn); color:var(--btn-text); border:none; padding:6px 10px; border-radius:8px; cursor:pointer; }
-.btn:hover { opacity:.95; }
-.groups { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; }
-.groups li { padding:6px 8px; border-radius:8px; cursor:pointer; border:1px solid transparent; }
-.groups li.active { background:rgba(127,127,127,.15); font-weight:600; }
-.groups li.dragover { border-color:#999; }
-.add-group { display:flex; gap:6px; }
-.add-group input { flex:1; }
-.content { padding:12px; display:flex; flex-direction:column; gap:12px; }
-.toolbar { display:grid; grid-template-columns: 1fr 1fr 2fr 1fr auto; gap:8px; }
-input, select, textarea { padding:8px; border:1px solid var(--border); border-radius:8px; background:var(--panel); color:var(--fg); width: 100%; font-family: inherit; }
-.list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; overflow:auto; flex:1; }
-.item { display:grid; grid-template-columns: 20px 24px 1fr auto; gap:10px; align-items:center; padding:8px; border:1px solid var(--border); border-radius:10px; background:var(--panel); }
-.item .favicon {
-  width: 20px;
-  height: 20px;
-  border-radius: 4px;
-  background-color: var(--border);
-}
-.item-content { display:flex; flex-direction:column; gap:4px; overflow: hidden; }
-.item .title { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.item .url { color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.item .taglist { color:var(--muted); font-size:12px; opacity:.9; }
-.item .taglist .tag { cursor: pointer; background: rgba(127,127,127,0.1); padding: 2px 5px; border-radius: 4px; margin-right: 4px; }
-.item .taglist .tag:hover { background: rgba(127,127,127,0.2); }
-/* НОВЫЙ КОД: Стили для заметки */
-.item .notes-display {
-  font-size: 13px;
-  color: var(--muted);
-  white-space: pre-wrap;
-  margin-top: 4px;
-  padding-left: 2px;
-}
-.item .pin { cursor:pointer; user-select:none; opacity:.4; }
-.item.pinned .pin { opacity:1; }
-.item.dragging { opacity:.6; }
-.item-actions { display:flex; gap:6px; }
-
-/* Inline Editing */
-.item .edit-view, .item .edit-actions { display: none; }
-.item.editing .display-view, .item.editing .display-actions { display: none; }
-.item.editing .edit-view, .item.editing .edit-actions { display: flex; }
-.item.editing .edit-view { flex-direction: column; gap: 6px; }
-.item.editing .edit-actions { gap: 6px; }
-
-/* Notifications */
-#notifications { position: fixed; bottom: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
-.toast { padding: 12px 18px; border-radius: 8px; color: #fff; font-weight: 500; opacity: 0; transform: translateX(100%); animation: slideIn 0.3s forwards; }
-.toast.info { background: var(--btn); }
-.toast.success { background: var(--success); }
-.toast.error { background: var(--error); }
-@keyframes slideIn { to { opacity: 1; transform: translateX(0); } }
-
-/* Modal */
-.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 100; }
-.modal-content { background: var(--bg); padding: 24px; border-radius: 12px; width: 90%; max-width: 400px; display: flex; flex-direction: column; gap: 12px; border: 1px solid var(--border); }
-.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
-
-/* Стили для кнопки удаления группы */
-.groups li {
-  position: relative;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+[data-theme='dark'] {
+    --bg-color: var(--bg-color-dark);
+    --text-color: var(--text-color-dark);
+    --border-color: var(--border-color-dark);
+    --primary-color: var(--primary-color-dark);
+    --secondary-bg: var(--secondary-bg-dark);
+    --accent-color: var(--accent-color-dark);
+    --input-bg: var(--input-bg-dark);
+    --shadow: var(--shadow-dark);
 }
 
-.delete-group-btn {
-  display: none; /* Скрыта по умолчанию */
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 16px;
-  line-height: 1;
-  padding: 2px 4px;
-  border-radius: 4px;
-  color: var(--muted);
-  font-weight: bold;
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
 }
 
-.groups li:hover .delete-group-btn {
-  display: block; /* Показываем при наведении */
-}
-
-.delete-group-btn:hover {
-  color: var(--fg);
-  background-color: rgba(127,127,127,.1);
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text-color);
+    background-color: var(--bg-color);
+    height: 100vh;
+    overflow: hidden; /* Prevent scroll on body */
+    display: flex; /* Use flex to ensure app-container fills height */
+    flex-direction: column;
 }
 
 /* ===================================== */
-/* НОВОЕ: Стили для статуса ссылки       */
+/* Основной макет приложения             */
+/* ===================================== */
+.app-container {
+    display: flex;
+    flex-grow: 1; /* Allow container to grow and fill body height */
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+
+.sidebar {
+    width: 250px;
+    background-color: var(--secondary-bg);
+    border-right: 1px solid var(--border-color);
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0; /* Prevent sidebar from shrinking */
+    overflow-y: auto; /* Enable scrolling for sidebar content */
+}
+
+.main-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+    overflow-y: hidden; /* Main content manages its own scroll for the list */
+}
+
+.header {
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    color: var(--primary-color);
+    text-align: center;
+}
+
+/* ===================================== */
+/* Элементы управления (кнопки, инпуты)   */
+/* ===================================== */
+.btn {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s ease;
+    white-space: nowrap; /* Prevent text wrapping */
+}
+
+.btn:hover {
+    background-color: #0056b3; /* Darker shade of primary */
+}
+
+.btn.gray {
+    background-color: #6c757d;
+}
+
+.btn.gray:hover {
+    background-color: #5a6268;
+}
+
+.btn.small {
+    padding: 5px 8px;
+    font-size: 12px;
+}
+
+input[type="text"], textarea {
+    border: 1px solid var(--border-color);
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    padding: 8px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    width: 100%;
+    font-size: 14px;
+    transition: border-color 0.2s ease;
+}
+
+input[type="text"]:focus, textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+/* ===================================== */
+/* Верхняя панель и добавление закладок  */
+/* ===================================== */
+.top-bar {
+    display: flex;
+    flex-wrap: wrap; /* Allow items to wrap on smaller screens */
+    gap: 10px;
+    margin-bottom: 15px;
+    align-items: flex-start; /* Align items to the top if they wrap */
+}
+
+.search-input {
+    flex-grow: 1;
+    min-width: 150px; /* Ensure search input has a minimum width */
+}
+
+.add-section {
+    display: flex;
+    flex-wrap: wrap; /* Allow inputs to wrap */
+    gap: 8px;
+    flex-grow: 2; /* Allow add section to take more space */
+    min-width: 300px; /* Minimum width for add section */
+}
+
+.add-section input {
+    flex-grow: 1;
+    min-width: 100px;
+    margin-bottom: 0; /* Remove bottom margin from inputs in flex context */
+}
+
+.add-section .btn {
+    flex-shrink: 0; /* Prevent add button from shrinking */
+    height: 34px; /* Match height of input fields */
+    margin-top: 1px; /* Small adjustment for visual alignment */
+}
+
+
+/* ===================================== */
+/* Список групп                           */
+/* ===================================== */
+.group-list-header {
+    font-weight: bold;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--primary-color);
+}
+
+.group-list {
+    list-style: none;
+    flex-grow: 1;
+    overflow-y: auto; /* Enable scrolling for group list */
+    padding-right: 5px; /* Add some padding for scrollbar */
+}
+
+.group-list li {
+    padding: 8px 10px;
+    margin-bottom: 5px;
+    background-color: var(--bg-color);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.group-list li:hover {
+    background-color: var(--accent-color);
+}
+
+.group-list li.active {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.group-list li.active:hover {
+    background-color: #0056b3;
+}
+
+.delete-group-btn {
+    color: #dc3545;
+    font-weight: bold;
+    margin-left: 10px;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.group-list li.active .delete-group-btn {
+    color: white;
+}
+
+.group-list li.active .delete-group-btn:hover {
+    color: #f8d7da; /* Light red on dark primary */
+}
+
+.group-list li.dragging {
+    opacity: 0.5;
+    border: 1px dashed var(--primary-color);
+}
+
+.group-list li.dragover {
+    border: 1px dashed var(--primary-color);
+    background-color: var(--accent-color);
+}
+
+.group-actions {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+}
+
+
+/* ===================================== */
+/* Список закладок и элементы закладок    */
+/* ===================================== */
+.bookmark-list {
+    list-style: none;
+    flex-grow: 1;
+    overflow-y: auto; /* Enable scrolling for bookmark list */
+    padding-right: 5px; /* Add some padding for scrollbar */
+}
+
+.bookmark-item {
+    background-color: var(--secondary-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    margin-bottom: 10px;
+    padding: 10px;
+    box-shadow: var(--shadow);
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.bookmark-item:hover {
+    border-color: var(--primary-color);
+}
+
+.bookmark-item.pinned {
+    border-left: 5px solid var(--primary-color);
+    padding-left: 5px; /* Adjust padding due to border */
+}
+
+.bookmark-item .favicon {
+    width: 16px;
+    height: 16px;
+    vertical-align: middle;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.bookmark-item .title {
+    font-weight: bold;
+    color: var(--primary-color);
+    margin-right: 10px;
+}
+
+.bookmark-item .url {
+    color: var(--text-color);
+    font-size: 12px;
+    word-break: break-all; /* Allow long URLs to break */
+    opacity: 0.7;
+}
+
+.bookmark-item .taglist {
+    margin-top: 5px;
+}
+
+.bookmark-item .tag {
+    display: inline-block;
+    background-color: var(--accent-color);
+    color: var(--text-color);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    margin-right: 5px;
+    margin-bottom: 3px;
+    cursor: pointer;
+}
+
+.bookmark-item .notes-display {
+    font-style: italic;
+    color: var(--text-color);
+    font-size: 12px;
+    margin-top: 5px;
+    max-height: 60px; /* Limit height */
+    overflow-y: auto; /* Scroll if too long */
+    border-top: 1px dashed var(--border-color);
+    padding-top: 5px;
+    margin-top: 5px;
+}
+
+
+/* ===================================== */
+/* Кнопки действий (пин, открыть, удалить) */
+/* ===================================== */
+.actions {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+}
+
+.icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    margin-left: 5px;
+    padding: 3px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+    color: var(--text-color); /* Default icon color */
+}
+
+.icon-btn:hover {
+    background-color: var(--accent-color);
+}
+
+.icon-btn.pin.pinned {
+    color: var(--primary-color); /* Highlight pinned icon */
+}
+
+.del { color: #dc3545; } /* Red for delete */
+.del:hover { background-color: rgba(220, 53, 69, 0.2); }
+
+/* ===================================== */
+/* Режим редактирования закладок          */
+/* ===================================== */
+.bookmark-item .edit-mode {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+}
+
+.bookmark-item.editing .display-mode {
+    display: none;
+}
+
+.bookmark-item.editing .edit-mode {
+    display: flex;
+}
+
+.edit-mode input[type="text"],
+.edit-mode textarea {
+    width: 100%;
+    margin-bottom: 0;
+}
+
+.edit-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    justify-content: flex-end;
+}
+
+/* ===================================== */
+/* Модальное окно перемещения            */
+/* ===================================== */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    display: none; /* Скрыто по умолчанию */
+}
+
+.modal-content {
+    background-color: var(--secondary-bg);
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    width: 400px;
+    max-width: 90%;
+    color: var(--text-color);
+}
+
+.modal-content h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: var(--primary-color);
+    text-align: center;
+}
+
+.modal-body {
+    margin-bottom: 20px;
+}
+
+.modal-body label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.modal-body select,
+.modal-body input[type="text"] {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    margin-bottom: 10px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.or-separator {
+    text-align: center;
+    margin: 15px 0;
+    font-weight: bold;
+    color: #999;
+    position: relative;
+}
+
+.or-separator::before,
+.or-separator::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    height: 1px;
+    background-color: var(--border-color);
+}
+
+.or-separator::before { left: 0; }
+.or-separator::after { right: 0; }
+
+/* ===================================== */
+/* Уведомления (нотификации)             */
+/* ===================================== */
+#notifications {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast {
+    background-color: var(--secondary-bg);
+    color: var(--text-color);
+    padding: 10px 15px;
+    border-radius: 5px;
+    box-shadow: var(--shadow);
+    opacity: 0;
+    animation: fadeInOut 4s forwards;
+    min-width: 250px;
+    text-align: center;
+    border: 1px solid var(--border-color);
+}
+
+.toast.success { background-color: #d4edda; color: #155724; border-color: #c3e6cb; }
+.toast.info { background-color: #d1ecf1; color: #0c5460; border-color: #bee5eb; }
+.toast.error { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
+
+[data-theme='dark'] .toast.success { background-color: #1e3a2c; color: #3ad363; border-color: #285437; }
+[data-theme='dark'] .toast.info { background-color: #17383f; color: #3be2f8; border-color: #214f59; }
+[data-theme='dark'] .toast.error { background-color: #4b1a1f; color: #ff8b9b; border-color: #6a242a; }
+
+
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: translateY(20px); }
+    10% { opacity: 1; transform: translateY(0); }
+    90% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(20px); }
+}
+
+/* ===================================== */
+/* Стили для статуса ссылки (добавленные)*/
 /* ===================================== */
 .link-status-icon {
     width: 16px;
