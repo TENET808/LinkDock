@@ -1,14 +1,25 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, shell } = require('electron');
 
 contextBridge.exposeInMainWorld('linkdock', {
+  // Store methods
   getAll: () => ipcRenderer.invoke('store:getAll'),
   save: (key, value) => ipcRenderer.invoke('store:save', { key, value }),
-  openLink: (url) => ipcRenderer.invoke('link:open', url),
-  importBookmarks: (from) => ipcRenderer.invoke('file:importBookmarks', from),
-  exportData: () => ipcRenderer.invoke('file:export'),
+
+  // UI methods
   getTheme: () => ipcRenderer.invoke('ui:getTheme'),
-  setTheme: (t) => ipcRenderer.invoke('ui:setTheme', t),
-  // НОВАЯ ФУНКЦИЯ
+  setTheme: (theme) => ipcRenderer.invoke('ui:setTheme', theme),
+  on: (channel, callback) => ipcRenderer.on(channel, (event, ...args) => callback(...args)),
+
+  // Link actions
+  openLink: (url) => shell.openExternal(url),
+  openInAppBrowser: (url) => ipcRenderer.invoke('link:open', url),
+  checkAllLinks: () => ipcRenderer.invoke('links:checkAll'), // НОВОЕ: Для запуска проверки ссылок
+  onLinkCheckProgress: (callback) => ipcRenderer.on('links:checkProgress', (event, ...args) => callback(...args)), // НОВОЕ: Для получения прогресса
+
+  // Dialogs
   showDeleteGroupDialog: (groupName) => ipcRenderer.invoke('dialog:showDeleteGroup', groupName),
-  on: (ch, cb) => ipcRenderer.on(ch, (_e, ...args) => cb(...args))
+
+  // File operations
+  importBookmarks: (from) => ipcRenderer.invoke('file:importBookmarks', from),
+  exportData: () => ipcRenderer.invoke('file:export')
 });
