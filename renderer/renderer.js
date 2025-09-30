@@ -3,7 +3,7 @@
 // =============================================================================
 const state = { groups: [], bookmarks: [], activeGroupId: null, search: '' };
 let dragSrcId = null; // ID перетаскиваемого элемента для Drag & Drop
-let linkCheckInProgress = false; // НОВОЕ: Флаг для отслеживания проверки ссылок
+let linkCheckInProgress = false; // Флаг для отслеживания проверки ссылок
 
 // =============================================================================
 // Инициализация приложения
@@ -13,6 +13,11 @@ let linkCheckInProgress = false; // НОВОЕ: Флаг для отслежив
   const all = await window.linkdock.getAll();
   state.groups = all.groups;
   state.bookmarks = all.bookmarks;
+  
+  // Убедимся, что есть хотя бы одна группа "Общее"
+  if (!state.groups.find(g => g.id === 'default')) {
+      state.groups.unshift({ id: 'default', name: 'Общее', order: -1 });
+  }
   state.activeGroupId = state.groups[0]?.id || null;
 
   // Устанавливаем тему
@@ -29,7 +34,7 @@ let linkCheckInProgress = false; // НОВОЕ: Флаг для отслежив
   // Подписываемся на события от главного процесса
   bindElectronEvents();
   
-  // НОВОЕ: Запускаем фоновую проверку ссылок
+  // Запускаем фоновую проверку ссылок
   startBrokenLinkCheck(); 
 })();
 
@@ -48,7 +53,7 @@ function bindElectronEvents() {
     const yes = confirm('Доступно обновление LinkDock. Перезапустить сейчас для установки?');
     if (yes) location.reload();
   });
-  // НОВОЕ: Обработчик для прогресса проверки ссылок
+  // Обработчик для прогресса проверки ссылок
   window.linkdock.onLinkCheckProgress(({ processed, total }) => {
     const progressText = `Проверка ссылок: ${processed} из ${total}...`;
     showNotification(progressText, 'info', 0); // Показываем уведомление без автоскрытия
@@ -127,7 +132,7 @@ async function persist(){
   await window.linkdock.save('groups', state.groups);
   await window.linkdock.save('bookmarks', state.bookmarks);
 }
-let notificationTimeout; // НОВОЕ: Для управления временем жизни уведомлений
+let notificationTimeout;
 function showNotification(message, type = 'info', duration = 3000) {
   const container = document.getElementById('notifications');
   const toast = document.createElement('div');
@@ -135,7 +140,6 @@ function showNotification(message, type = 'info', duration = 3000) {
   toast.textContent = message;
   container.appendChild(toast);
   
-  // НОВОЕ: Удаляем старые уведомления и сбрасываем таймаут
   Array.from(container.children).forEach(child => {
     if (child !== toast) child.remove();
   });
@@ -145,13 +149,11 @@ function showNotification(message, type = 'info', duration = 3000) {
     notificationTimeout = setTimeout(() => { toast.remove(); }, duration);
   }
 }
-// НОВОЕ: Функция для запуска фоновой проверки ссылок
 async function startBrokenLinkCheck() {
-    if (linkCheckInProgress) return; // Если проверка уже идет, игнорируем
+    if (linkCheckInProgress) return;
     linkCheckInProgress = true;
-    showNotification('Запуск фоновой проверки ссылок...', 'info');
-    await window.linkdock.checkAllLinks(); // Вызываем проверку
-    // Результаты обработки будут в onLinkCheckProgress
+    showNotification('Запуск фоновой проверки ссылок...', 'info', 0);
+    await window.linkdock.checkAllLinks();
 }
 
 
@@ -169,7 +171,6 @@ async function onAdd(){
   if (existingBookmark) {
     showNotification(`Закладка обновлена`, 'info');
     existingBookmark.title = t || u;
-    // Теги и заметки существующей закладки не трогаем, как договорились
   } else {
     const tags = tagStr ? tagStr.split(',').map(s=>s.trim()).filter(Boolean) : [];
     const bm = { 
@@ -181,8 +182,8 @@ async function onAdd(){
       pinned: false,
       faviconUrl: getFaviconUrl(u),
       notes: '',
-      lastCheckStatus: 'unchecked', // НОВОЕ: Начальный статус
-      lastCheckDate: null // НОВОЕ: Дата проверки
+      lastCheckStatus: 'unchecked',
+      lastCheckDate: null
     };
     state.bookmarks.push(bm);
   }
@@ -281,7 +282,7 @@ function renderList(){
     li.querySelector('.title').textContent = b.title;
     li.querySelector('.url').textContent = b.url;
 
-    // НОВОЕ: Отображение статуса ссылки
+    // Отображение статуса ссылки
     const statusIcon = li.querySelector('.link-status-icon');
     if (statusIcon) {
         statusIcon.className = `link-status-icon status-${b.lastCheckStatus || 'unchecked'}`;
@@ -325,7 +326,7 @@ function renderList(){
     li.querySelector('.edit-notes').value = b.notes || '';
 
     li.querySelector('.pin').addEventListener('click', async () => { b.pinned = !b.pinned; await persist(); renderList(); });
-    li.querySelector('.open').addEventListener('click', () => window.linkdock.openLink(b.url));
+    li.querySelector('.open').addEventListener('click', () => window.linkdock.openExternalLink(b.url)); // ИЗМЕНЕНО: Использование openExternalLink
     li.querySelector('.del').addEventListener('click', async () => {
       if (confirm(`Вы уверены, что хотите удалить закладку "${b.title}"?`)) {
         state.bookmarks = state.bookmarks.filter(x => x.id !== b.id); 
@@ -343,8 +344,8 @@ function renderList(){
       const newTags = li.querySelector('.edit-tags').value;
       b.tags = newTags ? newTags.split(',').map(s => s.trim()).filter(Boolean) : [];
       b.notes = li.querySelector('.edit-notes').value.trim();
-      b.lastCheckStatus = 'unchecked'; // НОВОЕ: Сбрасываем статус при редактировании URL
-      b.lastCheckDate = null; // НОВОЕ: Сбрасываем дату при редактировании URL
+      b.lastCheckStatus = 'unchecked';
+      b.lastCheckDate = null;
       await persist();
       renderList(); 
     });
@@ -466,6 +467,12 @@ async function doImport(kind){
   if (res.imported > 0) showNotification(`Импортировано ${res.imported} закладок`, 'success');
   const all = await window.linkdock.getAll();
   state.groups = all.groups; state.bookmarks = all.bookmarks;
+  
+  // Убедимся, что есть хотя бы одна группа "Общее" после импорта
+  if (!state.groups.find(g => g.id === 'default')) {
+      state.groups.unshift({ id: 'default', name: 'Общее', order: -1 });
+  }
+
   if (!state.activeGroupId && state.groups[0]) state.activeGroupId = state.groups[0].id;
   renderGroups(); renderList();
 }
