@@ -1,41 +1,19 @@
-// =============================================================================
-// Состояние приложения и глобальные переменные
-// =============================================================================
 const state = { groups: [], bookmarks: [], activeGroupId: null, search: '' };
-let dragSrcId = null; // ID перетаскиваемого элемента для Drag & Drop
-let linkCheckInProgress = false; // НОВОЕ: Флаг для отслеживания проверки ссылок
+let dragSrcId = null; // DnD
 
-// =============================================================================
-// Инициализация приложения
-// =============================================================================
 (async function init(){
-  // Загружаем все данные из хранилища
   const all = await window.linkdock.getAll();
   state.groups = all.groups;
   state.bookmarks = all.bookmarks;
   state.activeGroupId = state.groups[0]?.id || null;
-
-  // Устанавливаем тему
   const theme = await window.linkdock.getTheme();
   applyTheme(theme);
-
-  // Привязываем события к элементам интерфейса
   bindUI();
-
-  // Отрисовываем всё в первый раз
   renderGroups();
   renderList();
-
-  // Подписываемся на события от главного процесса
   bindElectronEvents();
-  
-  // НОВОЕ: Запускаем фоновую проверку ссылок
-  startBrokenLinkCheck(); 
 })();
 
-// =============================================================================
-// Глобальные события от Electron (main.js)
-// =============================================================================
 function bindElectronEvents() {
   window.linkdock.on('ui:focusSearch', ()=> document.getElementById('search').focus());
   window.linkdock.on('ui:importJSON', ()=> doImport('json'));
@@ -48,21 +26,8 @@ function bindElectronEvents() {
     const yes = confirm('Доступно обновление LinkDock. Перезапустить сейчас для установки?');
     if (yes) location.reload();
   });
-  // НОВОЕ: Обработчик для прогресса проверки ссылок
-  window.linkdock.onLinkCheckProgress(({ processed, total }) => {
-    const progressText = `Проверка ссылок: ${processed} из ${total}...`;
-    showNotification(progressText, 'info', 0); // Показываем уведомление без автоскрытия
-    if (processed === total) {
-        showNotification('Проверка ссылок завершена!', 'success');
-        linkCheckInProgress = false; // Снимаем флаг
-        renderList(); // Перерисовываем список для отображения новых статусов
-    }
-  });
 }
 
-// =============================================================================
-// Основные функции UI
-// =============================================================================
 function applyTheme(t){
   document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
 }
@@ -70,35 +35,28 @@ function applyTheme(t){
 function bindUI(){
   document.getElementById('addBtn').addEventListener('click', onAdd);
   document.getElementById('addGroupBtn').addEventListener('click', onAddGroup);
-  
   const addInputs = ['title', 'url', 'tags'];
   addInputs.forEach(id => {
     document.getElementById(id).addEventListener('keydown', (e) => {
       if (e.key === 'Enter') onAdd();
     });
   });
-
   document.getElementById('btnTheme').addEventListener('click', async ()=>{
     const cur = document.documentElement.getAttribute('data-theme') || 'light';
     const next = cur === 'light' ? 'dark' : 'light';
     applyTheme(next);
     await window.linkdock.setTheme(next);
   });
-  
   document.getElementById('search').addEventListener('input', (e)=>{ state.search = e.target.value.trim().toLowerCase(); renderList(); });
-  
   document.getElementById('impChrome').addEventListener('click', ()=> doImport('chrome'));
   document.getElementById('impEdge').addEventListener('click', ()=> doImport('edge'));
   document.getElementById('impFirefox').addEventListener('click', ()=> doImport('firefox'));
   document.getElementById('impJSON').addEventListener('click', ()=> doImport('json'));
-
   document.getElementById('btnExport').addEventListener('click', async () => {
     const res = await window.linkdock.exportData();
     if (res.ok) showNotification(`Экспорт успешно сохранен`, 'success');
     else if(res.error !== 'Отменено') showNotification(res.error, 'error');
   });
-
-  // События для модального окна перемещения
   document.getElementById('moveCancelBtn').addEventListener('click', closeMoveModal);
   document.getElementById('moveConfirmBtn').addEventListener('click', handleMoveBookmark);
   document.querySelector('.modal-overlay').addEventListener('click', (e) => {
@@ -106,9 +64,6 @@ function bindUI(){
   });
 }
 
-// =============================================================================
-// Утилиты (вспомогательные функции)
-// =============================================================================
 function uid(prefix){ return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2)}`; }
 function norm(str){ return (str||'').trim(); }
 function alphaSort(a,b){
@@ -127,37 +82,15 @@ async function persist(){
   await window.linkdock.save('groups', state.groups);
   await window.linkdock.save('bookmarks', state.bookmarks);
 }
-let notificationTimeout; // НОВОЕ: Для управления временем жизни уведомлений
 function showNotification(message, type = 'info', duration = 3000) {
   const container = document.getElementById('notifications');
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   toast.textContent = message;
   container.appendChild(toast);
-  
-  // НОВОЕ: Удаляем старые уведомления и сбрасываем таймаут
-  Array.from(container.children).forEach(child => {
-    if (child !== toast) child.remove();
-  });
-  clearTimeout(notificationTimeout);
-
-  if (duration > 0) {
-    notificationTimeout = setTimeout(() => { toast.remove(); }, duration);
-  }
-}
-// НОВОЕ: Функция для запуска фоновой проверки ссылок
-async function startBrokenLinkCheck() {
-    if (linkCheckInProgress) return; // Если проверка уже идет, игнорируем
-    linkCheckInProgress = true;
-    showNotification('Запуск фоновой проверки ссылок...', 'info');
-    await window.linkdock.checkAllLinks(); // Вызываем проверку
-    // Результаты обработки будут в onLinkCheckProgress
+  setTimeout(() => { toast.remove(); }, duration);
 }
 
-
-// =============================================================================
-// Управление данными (добавление, фильтрация)
-// =============================================================================
 async function onAdd(){
   const t = norm(document.getElementById('title').value);
   const u = norm(document.getElementById('url').value);
@@ -180,9 +113,7 @@ async function onAdd(){
       tags, 
       pinned: false,
       faviconUrl: getFaviconUrl(u),
-      notes: '',
-      lastCheckStatus: 'unchecked', // НОВОЕ: Начальный статус
-      lastCheckDate: null // НОВОЕ: Дата проверки
+      notes: ''
     };
     state.bookmarks.push(bm);
   }
@@ -218,9 +149,6 @@ function filtered(){
   );
 }
 
-// =============================================================================
-// Рендеринг списков (группы и закладки)
-// =============================================================================
 function renderGroups(){
   const ul = document.getElementById('groupList');
   ul.innerHTML = '';
@@ -229,6 +157,7 @@ function renderGroups(){
     const groupNameSpan = document.createElement('span');
     groupNameSpan.textContent = g.name;
     li.appendChild(groupNameSpan);
+
     li.className = (g.id === state.activeGroupId) ? 'active' : '';
 
     if (g.id !== 'default') {
@@ -261,6 +190,32 @@ function renderGroups(){
   });
 }
 
+async function handleDeleteGroup(groupId, groupName) {
+  const response = await window.linkdock.showDeleteGroupDialog(groupName);
+  
+  if (response === 0) return; // 0: Отмена
+
+  if (response === 1) { // 1: Переместить закладки
+    const defaultGroup = state.groups.find(g => g.id === 'default');
+    if (!defaultGroup) { showNotification('Группа "Общее" не найдена!', 'error'); return; }
+    state.bookmarks.forEach(b => {
+      if (b.groupId === groupId) b.groupId = 'default';
+    });
+  }
+  
+  if (response === 2) { // 2: Удалить всё
+    state.bookmarks = state.bookmarks.filter(b => b.groupId !== groupId);
+  }
+
+  state.groups = state.groups.filter(g => g.id !== groupId);
+  if (state.activeGroupId === groupId) state.activeGroupId = 'default';
+
+  await persist();
+  renderGroups();
+  renderList();
+  showNotification(`Группа "${groupName}" удалена`, 'success');
+}
+
 function renderList(){
   const list = filtered();
   const ul = document.getElementById('list');
@@ -280,21 +235,6 @@ function renderList(){
     
     li.querySelector('.title').textContent = b.title;
     li.querySelector('.url').textContent = b.url;
-
-    // НОВОЕ: Отображение статуса ссылки
-    const statusIcon = li.querySelector('.link-status-icon');
-    if (statusIcon) {
-        statusIcon.className = `link-status-icon status-${b.lastCheckStatus || 'unchecked'}`;
-        switch (b.lastCheckStatus) {
-            case 'ok': statusIcon.title = 'Ссылка работает'; break;
-            case 'broken': statusIcon.title = 'Ссылка не работает или недоступна'; break;
-            case 'timeout': statusIcon.title = 'Таймаут при проверке ссылки'; break;
-            case 'error': statusIcon.title = 'Ошибка при проверке ссылки'; break;
-            case 'unchecked': statusIcon.title = 'Ссылка не проверялась'; break;
-            case 'unknown': statusIcon.title = 'Неизвестный статус ссылки'; break;
-            default: statusIcon.title = 'Неизвестный статус'; break;
-        }
-    }
 
     const notesDisplay = li.querySelector('.notes-display');
     if (b.notes) { 
@@ -343,8 +283,6 @@ function renderList(){
       const newTags = li.querySelector('.edit-tags').value;
       b.tags = newTags ? newTags.split(',').map(s => s.trim()).filter(Boolean) : [];
       b.notes = li.querySelector('.edit-notes').value.trim();
-      b.lastCheckStatus = 'unchecked'; // НОВОЕ: Сбрасываем статус при редактировании URL
-      b.lastCheckDate = null; // НОВОЕ: Сбрасываем дату при редактировании URL
       await persist();
       renderList(); 
     });
@@ -360,35 +298,6 @@ function renderList(){
   });
 
   if (shouldPersist) persist();
-}
-
-// =============================================================================
-// Логика конкретных действий (удаление группы, модальные окна)
-// =============================================================================
-async function handleDeleteGroup(groupId, groupName) {
-  const response = await window.linkdock.showDeleteGroupDialog(groupName);
-  
-  if (response === 0) return; // 0: Отмена
-
-  if (response === 1) { // 1: Переместить закладки
-    const defaultGroup = state.groups.find(g => g.id === 'default');
-    if (!defaultGroup) { showNotification('Группа "Общее" не найдена!', 'error'); return; }
-    state.bookmarks.forEach(b => {
-      if (b.groupId === groupId) b.groupId = 'default';
-    });
-  }
-  
-  if (response === 2) { // 2: Удалить всё
-    state.bookmarks = state.bookmarks.filter(b => b.groupId !== groupId);
-  }
-
-  state.groups = state.groups.filter(g => g.id !== groupId);
-  if (state.activeGroupId === groupId) state.activeGroupId = 'default';
-
-  await persist();
-  renderGroups();
-  renderList();
-  showNotification(`Группа "${groupName}" удалена`, 'success');
 }
 
 let bookmarkToMoveId = null;
@@ -436,9 +345,6 @@ async function handleMoveBookmark() {
   closeMoveModal();
 }
 
-// =============================================================================
-// Drag & Drop
-// =============================================================================
 function reorderBookmark(dstId){
   if (!dragSrcId || dragSrcId === dstId) return;
   const inGroup = state.bookmarks.filter(x => x.groupId === state.activeGroupId);
@@ -453,9 +359,6 @@ function reorderBookmark(dstId){
   renderList();
 }
 
-// =============================================================================
-// Импорт
-// =============================================================================
 async function doImport(kind){
   const res = await window.linkdock.importBookmarks(kind);
   if (!res?.ok) { 
