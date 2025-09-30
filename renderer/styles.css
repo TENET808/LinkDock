@@ -84,3 +84,34 @@ input, select, textarea { padding:8px; border:1px solid var(--border); border-ra
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 100; }
 .modal-content { background: var(--bg); padding: 24px; border-radius: 12px; width: 90%; max-width: 400px; display: flex; flex-direction: column; gap: 12px; border: 1px solid var(--border); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+
+/* Стили для кнопки удаления группы */
+.groups li {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.delete-group-btn {
+  display: none; /* Скрыта по умолчанию */
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+  color: var(--muted);
+  font-weight: bold;
+}
+
+.groups li:hover .delete-group-btn {
+  display: block; /* Показываем при наведении */
+}
+
+.delete-group-btn:hover {
+  color: var(--fg);
+  background-color: rgba(127,127,127,.1);
+}
